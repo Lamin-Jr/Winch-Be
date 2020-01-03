@@ -4,6 +4,9 @@ const Pole = require('../../app/winch/api/models/pole');
 // const {
   // buildFeaturesCollection,
 // } = require('./winch-boot/utils')
+const creatorFragment = mongooseMixins.makeCreator(
+  new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID),
+  process.env.WCH_AUTHZ_SYSTEM_ROLE);
 
 module.exports.buildPoles = () => {
   return new Promise((resolve, reject) => {
@@ -137,7 +140,7 @@ function getPoles() {
 function buildPole(id, code, geo = undefined) {
   const result = {
     _id: new mongoose.Types.ObjectId(id),
-    ...mongooseMixins.makeCreator(creator, creatorRole),
+    ...creatorFragment,
     enabled: true,
     code: code,
     geo: geo,
