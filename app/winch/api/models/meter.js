@@ -4,6 +4,7 @@ const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
 
 const meterSchema = mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId,
+  ...mongooseMixins.fullCrudActors,
   plant: {
     type: String,
     required: true

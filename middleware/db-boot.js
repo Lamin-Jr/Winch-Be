@@ -19,7 +19,6 @@ function handleConnectionDown(dbConnKey) {
 
 const mainDBConn = mongoose
   .connect(
-    //`${process.env.MAIN_DB_SCHEME}://${process.env.MAIN_DB_USER}${process.env.MAIN_DB_PW  ? ':' + process.env.MAIN_DB_PW + '@': ''}${process.env.MAIN_DB_HOST}/${process.env.MAIN_DB_NAME}${process.env.MAIN_DB_ARGS ? '?' + process.env.MAIN_DB_ARGS : ''}`,
     mongooseUtil.buildConnectionString({
       scheme: process.env.MAIN_DB_SCHEME,
       user: process.env.MAIN_DB_USER,
