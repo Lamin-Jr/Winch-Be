@@ -11,6 +11,8 @@ const PlantGenerationLog = require('../app/winch/api/models/plant-generation-log
 
 const { PlantIdGenerator } = require('./winch-boot/utils')
 const { buildPlantParts } = require('./winch-boot/plant-part')
+const { buildPoles } = require('./winch-boot/pole')
+const { buildMeters } = require('./winch-boot/meter')
 
 const creator = new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID);
 const creatorRole = process.env.WCH_AUTHZ_SYSTEM_ROLE;
@@ -689,6 +691,8 @@ exports.boot = () => {
   .then(() => buildPlantsPerformanceRatio())
   .then(() => checkPlantGenerationLog())
   .then(() => buildPlantParts())
+  .then(() => buildPoles())
+  .then(() => buildMeters())
   .catch(error => {
     console.error(`errors encountered during winch database population: ${error}`);
   })

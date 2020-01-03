@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
 
 const meterSchema = mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
+  _id: String,  // [GP MODDED TO STRING  BEFORE mongoose.Schema.Types.ObjectId ]
   plant: {
     type: String,
     required: true
