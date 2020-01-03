@@ -113,6 +113,26 @@ module.exports.history = {
     }
 }
 
+module.exports.makeHistory = (root, parent, from, to) => {
+    return {
+        _hist: {
+            r: root,
+            p: parent,
+            f: from,
+            t: to
+        }
+    }
+}
+module.exports.makeHistoryOnCreate = (targetCreationDate, targetId) => {
+    return this.makeHistory(targetId, undefined, targetCreationDate, undefined)
+}
+module.exports.makeHistoryOnUpdateOldTarget = (targetUpdateDate, storedTarget) => {
+    return this.makeHistory(storedTarget._hist.r, storedTarget._hist.p, storedTarget._hist.f, targetUpdateDate)
+}
+module.exports.makeHistoryOnUpdateNewTarget = (targetUpdateDate, storedTarget) => {
+    return this.makeHistory(storedTarget._hist.r, storedTarget._id, targetUpdateDate, undefined)
+}
+
 
 // Person
 //

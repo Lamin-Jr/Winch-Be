@@ -5,7 +5,7 @@ const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
 
 const tariffSchema = mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId,
-  ...mongooseMixins.creator,
+  ...mongooseMixins.fullCrudActors,
   ...mongooseMixins.history,
   name: {
     type: String,
@@ -104,10 +104,11 @@ const tariffSchema = mongoose.Schema({
         max: Double
       }]
     }
-  }
+  },
+  plant: String
 }, { 
   collection: 'tariffs',
-  ...mongooseMixins.creatorTs
+  ...mongooseMixins.fullCrudActorsTs
 });
 
 const model = require('../middleware/mongoose').model('Tariff', tariffSchema);

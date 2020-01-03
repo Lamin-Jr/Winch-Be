@@ -18,7 +18,7 @@ const setAppName = require('../middleware/set-app-name');
 // token-protected
 router.get('/', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterCtrl.read_by_query);
 
-router.get('/autocomplete', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterCtrl.autocomplete);
+// router.get('/autocomplete', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterCtrl.autocomplete);
 
 // router.post('/', checkAuth, setAppName, retrieveUserProfile, MeterCtrl.create);
 

@@ -11,10 +11,20 @@ const poleSchema = mongoose.Schema({
     required: true,
     unique: true
   },
-  geo: mongoose.Schema.Types.FeatureCollection
+  geo: {
+    type: mongoose.Schema.Types.FeatureCollection,
+    require: false
+  }
 }, { 
   collection: 'poles',
   ...mongooseMixins.fullCrudActorsTs,
+});
+
+poleSchema.index({
+  code: 1
+}, {
+  name: 'code-asc',
+  background: true
 });
 
 const model = require('../middleware/mongoose').model('Pole', poleSchema);
