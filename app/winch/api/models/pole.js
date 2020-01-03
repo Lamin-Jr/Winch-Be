@@ -12,8 +12,7 @@ const poleSchema = mongoose.Schema({
     unique: true
   },
   geo: {
-    type: mongoose.Schema.Types.FeatureCollection,
-    require: false
+    type: mongoose.Schema.Types.FeatureCollection
   }
 }, { 
   collection: 'poles',

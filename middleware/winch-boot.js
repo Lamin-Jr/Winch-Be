@@ -9,30 +9,16 @@ const PlantPerformaceRatio = require('../app/winch/api/models/plant-pr')
 const PlantElectricityAvailableForSale = require('../app/winch/api/models/plant-eafs')
 const PlantGenerationLog = require('../app/winch/api/models/plant-generation-log')
 
-const { PlantIdGenerator } = require('./winch-boot/utils')
+const {
+  buildFeaturesCollection,
+  PlantIdGenerator
+} = require('./winch-boot/utils')
 const { buildPlantParts } = require('./winch-boot/plant-part')
 const { buildPoles } = require('./winch-boot/pole')
 const { buildMeters } = require('./winch-boot/meter')
 
 const creator = new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID);
 const creatorRole = process.env.WCH_AUTHZ_SYSTEM_ROLE;
-
-function buildFeaturesCollection(lat, lng) {
-  const result = {
-    type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'Point',
-          coordinates: [lng, lat]
-        }
-      }
-    ]
-  };
-  return result;
-}
 
 function buildCountry(defaultName, alpha2, alpha3, numericCode) {
   const result = {

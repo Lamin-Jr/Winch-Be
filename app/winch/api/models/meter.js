@@ -3,22 +3,14 @@ const mongoose = require('mongoose');
 const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
 
 const meterSchema = mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
+  _id: String,
   ...mongooseMixins.fullCrudActors,
-  plant: {
-    type: String,
-    required: true
-  },
-  pole: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true
-  },
   phase: Number,
   label: {
     type: String,
     required: true
   },
-  'hardware-info': {
+  'hw': {
     manufacturer: {
       type: String,
       required: true
@@ -31,6 +23,14 @@ const meterSchema = mongoose.Schema({
       type: String,
       required: true
     }
+  },
+  plant: {
+    type: String,
+    required: true
+  },
+  pole: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
   }
 }, { 
   collection: 'meters',

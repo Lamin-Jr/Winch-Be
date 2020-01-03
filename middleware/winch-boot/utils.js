@@ -1,6 +1,24 @@
 "use strict"
 
 
+function buildFeaturesCollection(lat, lng) {
+  const result = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'Point',
+          coordinates: [lng, lat]
+        }
+      }
+    ]
+  };
+  return result;
+}
+
+
 class PlantIdGenerator {
   constructor() {
     this._mapping = new Map();
@@ -22,5 +40,6 @@ class PlantIdGenerator {
 
 
 module.exports = {
-  PlantIdGenerator,
+  buildFeaturesCollection,
+  PlantIdGenerator
 }
