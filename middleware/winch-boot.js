@@ -538,7 +538,7 @@ function buildVillages() {
 function buildPlants() {
   return new Promise((resolve, reject) => {
     const plantIdGenerator = new PlantIdGenerator();
-    let plantBuilders = getPlantBuilders();
+    const plantBuilders = getPlantBuilders();
 
     Village.find({}).select({ name: 1 }).exec()
     .then(findResult => {
