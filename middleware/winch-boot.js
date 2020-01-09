@@ -15,7 +15,11 @@ const {
 } = require('./winch-boot/utils')
 const { buildPlantParts } = require('./winch-boot/plant-part')
 const { buildPoles } = require('./winch-boot/pole')
-const { buildMeters } = require('./winch-boot/meter')
+// const { buildMeters } = require('./winch-boot/meter') // [GP]
+// const { buildTariffs } = require('./winch-boot/tariffs') // [GP]
+//const { buildCustomers } = require('./winch-boot/customer') // [GP]
+const { buildExchangeRates } = require('./winch-boot/exchange-rate')
+
 
 const creator = new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID);
 const creatorRole = process.env.WCH_AUTHZ_SYSTEM_ROLE;
@@ -677,9 +681,13 @@ exports.boot = () => {
   .then(() => buildPlantsPerformanceRatio())
   .then(() => checkPlantGenerationLog())
   .then(() => buildPlantParts())
-  .then(() => buildPoles())
-  .then(() => buildMeters())
+  //.then(() => buildPoles())
+  // .then(() => buildMeters())
+  // .then(() => buildTariffs())
+  //.then(() => buildCustomers())
+  .then(() => buildExchangeRates())
   .catch(error => {
     console.error(`errors encountered during winch database population: ${error}`);
   })
+
 };

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
-
+const Double = require('@mongoosejs/double') // [GP] 
 const Tariff = require('./tariff')
 
 const customerSchema = mongoose.Schema({
@@ -11,8 +11,8 @@ const customerSchema = mongoose.Schema({
   customerType: String,
   ...mongooseMixins.makePersonModel(),
   geo: mongoose.Schema.Types.FeatureCollection,
-  meter: mongoose.Schema.Types.ObjectId,
-  tariff: Tariff,
+  meter: String,  // [GP] BEFORE mongoose.Schema.Types.ObjectId
+  tariff: [Tariff], // [GP] BEFORE Tariff 
   'next-tariff': {
     _id: mongoose.Schema.Types.ObjectId,
     from: Date

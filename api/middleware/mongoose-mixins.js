@@ -107,7 +107,6 @@ module.exports.history = {
         },
         t: {
             type: Date,
-            required: true,
             default: new Date(process.env.DATE_MAX)
         }
     }

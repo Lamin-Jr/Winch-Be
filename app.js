@@ -75,6 +75,7 @@ app.use('/winch/reports', require('./app/winch/api/routes/report'))
 app.use('/winch/meters', require('./app/winch/api/routes/meter'));
 app.use('/winch/poles', require('./app/winch/api/routes/pole'));
 app.use('/winch/tariffs', require('./app/winch/api/routes/tariff'));
+app.use('/winch/exchange-rates', require('./app/winch/api/routes/exchange-rate')); // [GP]
 // app.use('/winch/transactions', require('./app/winch/api/routes/transaction'));
 // app.use('/winch/agents', require('./app/winch/api/routes/agents'));
 // app.use('/winch/customers', require('./app/winch/api/routes/customer'));
