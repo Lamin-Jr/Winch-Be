@@ -681,10 +681,10 @@ exports.boot = () => {
   .then(() => buildPlantsPerformanceRatio())
   .then(() => checkPlantGenerationLog())
   .then(() => buildPlantParts())
-  //.then(() => buildPoles())
+  .then(() => buildPoles())
   // .then(() => buildMeters())
   // .then(() => buildTariffs())
-  //.then(() => buildCustomers())
+  // .then(() => buildCustomers())
   .then(() => buildExchangeRates())
   .catch(error => {
     console.error(`errors encountered during winch database population: ${error}`);

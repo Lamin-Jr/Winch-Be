@@ -1,4 +1,5 @@
 module.exports = {
+  // connection
   defaultArgs: {
     useCreateIndex: true,
     useNewUrlParser: true,
@@ -26,5 +27,16 @@ module.exports = {
       result = result.concat('?').concat(connParams.args)
     }
     return result;
-  }
+  },
+  // crUd
+  defaultUpdateOptions: {
+    new: true,
+    upsert: false,
+    useFindAndModify: false
+  },
+  defaultUpsertOptions: {
+    new: true,
+    upsert: true,
+    useFindAndModify: false
+  },
 };
