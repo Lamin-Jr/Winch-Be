@@ -6,7 +6,7 @@ const AppCtrl = require('../controllers/app');
 const checkAuth = require('../../../../api/middleware/check-auth');
 const retrieveUserProfile = require('../../../../api/middleware/retrieve-user-profile');
 
-const setAppName = require('../middleware/set-app-name');
+const setAppName = require('../middleware/rest/set-app-name');
 
 const checkAdminRole = (req, res, next) => {
     if (req.userData.role === process.env.WCH_AUTHZ_ADMIN_ROLE) {

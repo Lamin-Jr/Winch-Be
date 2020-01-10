@@ -29,7 +29,7 @@ const exchangeRateSchema = mongoose.Schema({
   ...mongooseMixins.fullCrudActorsTs,
 });
 
-const model = require('../middleware/mongoose').model('ExchangeRate', exchangeRateSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('ExchangeRate', exchangeRateSchema);
 
 
 module.exports = model;

@@ -111,7 +111,7 @@ const tariffSchema = mongoose.Schema({
   ...mongooseMixins.fullCrudActorsTs
 });
 
-const model = require('../middleware/mongoose').model('Tariff', tariffSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Tariff', tariffSchema);
 
 
 module.exports = model;

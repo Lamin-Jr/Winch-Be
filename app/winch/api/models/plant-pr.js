@@ -38,7 +38,7 @@ plantPerformanceRatioSchema.index({
   background: true
 });
 
-const model = require('../middleware/mongoose').model('PlantPerformanceRatio', plantPerformanceRatioSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('PlantPerformanceRatio', plantPerformanceRatioSchema);
 
 
 module.exports = model;

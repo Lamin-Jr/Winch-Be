@@ -27,7 +27,7 @@ const customerSchema = mongoose.Schema({
   ...mongooseMixins.fullCrudActorsTs,
 });
 
-const model = require('../middleware/mongoose').model('Customer', customerSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Customer', customerSchema);
 
 
 module.exports = model;

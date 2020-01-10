@@ -26,7 +26,7 @@ poleSchema.index({
   background: true
 });
 
-const model = require('../middleware/mongoose').model('Pole', poleSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Pole', poleSchema);
 
 
 module.exports = model;

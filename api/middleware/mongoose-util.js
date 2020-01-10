@@ -1,10 +1,5 @@
 module.exports = {
   // connection
-  defaultArgs: {
-    useCreateIndex: true,
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  },
   buildConnectionString: (connParams) => {
     let result = connParams.scheme.concat('://');
     let credSep = undefined
@@ -28,15 +23,44 @@ module.exports = {
     }
     return result;
   },
+  defaultConnectionOptions: {
+    connectTimeoutMS: 7000,
+    keepAlive: true,
+    keepAliveInitialDelay: 300000,
+    useCreateIndex: true,
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  },
+  buildConnectionOptions(customConnOptions = {}) {
+    return {
+      ...this.defaultConnectionOptions,
+      ...customConnOptions
+    }
+  },
+  defaultUseDbOptions: {
+    useCache: true
+  },
   // crUd
   defaultUpdateOptions: {
     new: true,
     upsert: false,
     useFindAndModify: false
   },
+  buildUpdateOptions(customUpdateOptions = {}) {
+    return {
+      ...this.defaultUpdateOptions,
+      ...customUpdateOptions
+    }
+  },
   defaultUpsertOptions: {
     new: true,
     upsert: true,
     useFindAndModify: false
+  },
+  buildUpsertOptions(customUpsertOptions = {}) {
+    return {
+      ...this.defaultUpsertOptions,
+      ...customUpsertOptions
+    }
   },
 };

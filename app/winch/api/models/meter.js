@@ -44,7 +44,7 @@ meterSchema.index({
   background: true
 });
 
-const model = require('../middleware/mongoose').model('Meter', meterSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Meter', meterSchema);
 
 
 module.exports = model;

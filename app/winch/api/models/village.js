@@ -21,7 +21,7 @@ const villageSchema = mongoose.Schema({
   ...mongooseMixins.fullCrudActorsTs,
 });
 
-const model = require('../middleware/mongoose').model('Village', villageSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Village', villageSchema);
 
 
 module.exports = model;

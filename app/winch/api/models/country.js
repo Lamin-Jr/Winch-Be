@@ -21,7 +21,7 @@ const countrySchema = mongoose.Schema({
   collection: 'countries'
 });
 
-const model = require('../middleware/mongoose').model('Country', countrySchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Country', countrySchema);
 
 
 module.exports = model;

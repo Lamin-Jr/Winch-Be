@@ -67,7 +67,7 @@ plantElectricityAvailableForSaleSchema.index({
   background: true
 });
 
-const model = require('../middleware/mongoose').model('PlantElectricityAvailableForSaleSchema', plantElectricityAvailableForSaleSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('PlantElectricityAvailableForSaleSchema', plantElectricityAvailableForSaleSchema);
 
 
 module.exports = model;

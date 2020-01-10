@@ -144,6 +144,183 @@ aggregation = aggregation
   BasicRead.aggregate(req, res, next, Plant, aggregation, req._q.skip, req._q.limit);
 };
 
+// cRud/aggregateForTotalizers
+exports.aggregate_for_totalizers = (req, res, next) => {
+  const isDailyPeriod = req.params.period === 'daily';
+  const readingsFilter = {
+  };
+  // TODO
+  // const dailyReadingsFilter = {
+  // };
+  // const moreThanDailyReadingsFilter = {
+  // };
+  const getPlantIdsFilter = {
+    enabled: true
+  };
+  let plantsStatusFilter = undefined;
+  let locationsFilter = undefined;
+
+  // retrieve totalizers filter: plant ids + date range
+  //
+  if (req.body.filter) {
+    if (req.body.filter.tsFrom) {
+      Object.assign(readingsFilter, isDailyPeriod
+        ? { ts: { '$gte': req.body.filter.tsFrom } }
+        : { tsf: { '$gte': req.body.filter.tsFrom } });
+      // TODO
+      // Object.assign(dailyReadingsFilter, {
+      //   "ts": { $gte: req.body.filter.tsFrom }
+      // });
+      // Object.assign(moreThanDailyReadingsFilter, {
+      //   "tsf": { $gte: req.body.filter.tsFrom }
+      // });
+    }
+    if (req.body.filter.tsTo) {
+      Object.assign(readingsFilter, isDailyPeriod
+        ? { ts: { $gte: req.body.filter.tsTo } }
+        : { tsf: { $gte: req.body.filter.tsTo } });
+      // TODO
+      // Object.assign(dailyReadingsFilter, {
+      //   "ts": { $gte: req.body.filter.tsTo }
+      // });
+      // Object.assign(moreThanDailyReadingsFilter, {
+      //   "tsf": { $gte: req.body.filter.tsTo }
+      // });
+    }
+    if (req.body.filter.plants && req.body.filter.plants.length) {
+      Object.assign(getPlantIdsFilter, {
+        _id: { '$in': req.body.filter.plants }
+      })
+    }
+    if (req.body.filter.projects && req.body.filter.projects.length) {
+      Object.assign(getPlantIdsFilter, {
+        'project.id': { '$in': req.body.filter.projects }
+      })
+    }
+    if (req.body.filter['plants-status'] && req.body.filter['plants-status'].length) {
+      plantsStatusFilter = {
+        'monitor.status': { '$in': req.body.filter['plants-status'] }
+      }
+    }
+    if (req.body.filter.villages && req.body.filter.villages.length) {
+      locationsFilter = {
+        'village._id': { '$in': req.body.filter.villages.map(idAsString => new mongoose.Types.ObjectId(idAsString)) }
+      }
+    }
+    if (req.body.filter.countries && req.body.filter.countries.length) {
+      if (!locationsFilter) {
+        locationsFilter = {}
+      }
+      Object.assign(locationsFilter, {
+        'village.country': { '$in': req.body.filter.countries }
+      })
+    }
+  }
+
+  const project = {
+    project: 1,
+    village: 1,
+    'monitor.status': 1,
+  };
+  
+  let aggregation = Plant.aggregate()
+    .match(getPlantIdsFilter)
+    .lookup({
+      from: 'plants-status',
+      localField: '_id',
+      foreignField: '_id',
+      as: 'monitor'
+    })
+    .unwind('$monitor')
+    .project(project);
+
+  if (plantsStatusFilter) {
+    aggregation = aggregation.match(plantsStatusFilter);
+  }
+
+  {
+    const projectFields = Object.getOwnPropertyNames(project);
+    for (var i = 0; i < projectFields.length; i++) {
+      delete project[projectFields[i]];
+    }
+  }
+  project._id = 1
+
+  aggregation = aggregation
+    .lookup({
+      from: 'villages',
+      localField: 'village',
+      foreignField: '_id',
+      as: 'village'
+    })
+    .unwind('$village');
+
+  if (locationsFilter) {
+    aggregation = aggregation.match(locationsFilter);
+  }
+  aggregation = aggregation.project(project);
+  aggregation = aggregation.allowDiskUse(true);
+
+  aggregation.exec()
+  .then(readResult => {
+    if (!readResult.length) {
+      WellKnownJsonRes.okMulti(res);
+      return;
+    }
+    const readingsPlantIdsOrList = [];
+    readResult.map(itemBody => itemBody._id).forEach((plantId) => {
+      const plantIdTokens = plantId.split('|');
+        readingsPlantIdsOrList.push({
+          _id: new RegExp(`^\\|${plantIdTokens[1]}\\|${plantIdTokens[2]}\\|${plantIdTokens[3]}\\|.*`)
+        });
+    });
+  
+    if (readingsPlantIdsOrList.length) {
+      Object.assign(readingsFilter, {
+        '$or': readingsPlantIdsOrList
+      });
+      // TODO
+      // Object.assign(dailyReadingsFilter, {
+      //   '$or': readingsPlantIdsOrList
+      // });
+      // Object.assign(moreThanDailyReadingsFilter, {
+      //   '$or': readingsPlantIdsOrList
+      // });
+    }
+
+    // perform actual aggregation
+    //
+    const schema = require('../../api/schemas/readings/meter-reading-daily-log');
+    const MeterReadingDaily = require('../middleware/mongoose-db-conn').driverDBConnRegistry.get('spm').model('MeterReadingDaily', schema);
+    aggregation = MeterReadingDaily.aggregate()
+      .match(readingsFilter)
+      .group(isDailyPeriod
+        ? {
+            _id: '$d',
+            ts : { '$first': '$ts' }, 
+            'e-sold-kwh' : { '$sum': '$e-sold-kwh' }, 
+            'e-sold-local-currency' : { '$sum': '$e-sold-local-currency' }, 
+        }
+        : {
+          // TODO
+          _id: 1
+        })
+
+    if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
+      aggregation = aggregation.sort(req._q.sort);
+    }  
+
+    if (JsonObjectHelper.isNotEmpty(req._q.proj)) {
+      aggregation = aggregation.project(req._q.proj);
+    }
+
+    BasicRead.aggregate(req, res, next, MeterReadingDaily, aggregation, req._q.skip, req._q.limit);
+  })
+  .catch(readError => {
+    WellKnownJsonRes.errorDebug(res, readError);
+  });
+};
+
 // cRud/aggregateForPlant
 exports.aggregate_for_plant = (req, res, next) => {
   const plantFilter = {
@@ -198,9 +375,9 @@ exports.aggregate_for_plant = (req, res, next) => {
     'parts.part.label': 1,
     'parts.part.hw': 1,
     'parts.part.doc': 1,
-});
+  });
 
-aggregation = aggregation
+  aggregation = aggregation
     .lookup({
       from: 'villages',
       localField: 'village',

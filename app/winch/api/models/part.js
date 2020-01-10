@@ -49,7 +49,7 @@ const partSchema = mongoose.Schema({
   collection: 'parts'
 });
 
-const model = require('../middleware/mongoose').model('Part', partSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Part', partSchema);
 
 
 module.exports = model;

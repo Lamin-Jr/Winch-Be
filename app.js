@@ -64,7 +64,7 @@ app.use('/account', accountDetailRoutes);
 const utilRoutes = require('./api/routes/util');
 app.use('/util', utilRoutes);
 // - app: winch
-const propagatePlantId = require('./app/winch/api/middleware/propagate-plant-id');
+const propagatePlantId = require('./app/winch/api/middleware/rest/propagate-plant-id');
 // TODO app.use('/winch/plants/:plantId/logs/generation', propagatePlantId, require('./app/winch/api/routes/plant-generation-log'));
 app.use('/winch/plants/:plantId/parts', propagatePlantId, require('./app/winch/api/routes/plant-part'));
 app.use('/winch/plants/aggregates', require('./app/winch/api/routes/plant-aggregate'));

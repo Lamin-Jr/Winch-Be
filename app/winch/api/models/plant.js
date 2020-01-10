@@ -123,7 +123,7 @@ plantSchema.index({
   background: true
 });
 
-const model = require('../middleware/mongoose').model('Plant', plantSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Plant', plantSchema);
 
 
 module.exports = model;

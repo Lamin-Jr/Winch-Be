@@ -10,14 +10,14 @@ function handleAfterConnectionError(dbConnKey) {
 }
 
 function handleConnectionUp(dbConnKey) {
-  console.log(`MongoDB connection '${dbConnKey}' is up`);
+  console.info(`MongoDB connection '${dbConnKey}' is up`);
 }
 
 function handleConnectionDown(dbConnKey) {
-  console.log(`MongoDB connection '${dbConnKey}' is down`);
+  console.info(`MongoDB connection '${dbConnKey}' is down`);
 }
 
-const mainDBConn = mongoose
+/*const mainDBConn = */ mongoose
   .connect(
     mongooseUtil.buildConnectionString({
       scheme: process.env.MAIN_DB_SCHEME,
@@ -27,12 +27,12 @@ const mainDBConn = mongoose
       dbName: process.env.MAIN_DB_NAME,
       args: process.env.MAIN_DB_ARGS
     }),
-    mongooseUtil.defaultArgs
+    mongooseUtil.defaultConnectionOptions
   )
   .then(
     () => {
       /** ready to use. The `mongoose.connect()` promise resolves to undefined. */
-      handleConnectionUp('main')
+      handleConnectionUp('main');
       mongoose.connection.on('error', () => handleAfterConnectionError('main'));
       mongoose.connection.on('connected', () => handleConnectionUp('main'));
       mongoose.connection.on('disconnected', () => handleConnectionDown('main'));
@@ -43,18 +43,25 @@ const mainDBConn = mongoose
     }
   );
 
-const winchDBConn = require('../app/winch/api/middleware/mongoose');
+const {
+  winchDBConn,
+  driverDBConnRegistry
+} = require('../app/winch/api/middleware/mongoose-db-conn');
+
+driverDBConnRegistry.add('spm', {
+  'error': handleAfterConnectionError,
+  'connected': handleConnectionUp,
+  'disconnected': handleConnectionDown
+});
 
 exports.boot = () => {
-  const otherDbConnections = {
-    winch: winchDBConn
-  };
-
-  Object.keys(otherDbConnections).forEach(dbConnKey => {
-    const connection = otherDbConnections[dbConnKey];
-    connection.catch((error) => handleInitialConnectionError(dbConnKey, error))
-    connection.on('error', () => handleAfterConnectionError(dbConnKey))
-    connection.on('connected', () => handleConnectionUp(dbConnKey));
-    connection.on('disconnected', () => handleConnectionDown(dbConnKey));
-  });
+  winchDBConn
+    .then(workingWinchDBConn => {
+      const dbConnKey = 'winch';
+      handleConnectionUp(dbConnKey);
+      workingWinchDBConn.on('error', () => handleAfterConnectionError(dbConnKey));
+      workingWinchDBConn.on('connected', () => handleConnectionUp(dbConnKey));
+      workingWinchDBConn.on('disconnected', () => handleConnectionDown(dbConnKey));
+    })
+    .catch(error => handleInitialConnectionError(dbConnKey, error));
 };

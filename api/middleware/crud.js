@@ -50,7 +50,7 @@ class BasicRead {
   // cRud/autocomplete
   static autocomplete(req, res, next, model, textFieldName, textSearch, filter = {}, skip = 0, limit = 10, projection = {}, sort = {}, maxResults = 10) {
     if (textSearch) {
-      Object.assign(filter, FilterHelper.buildAutocompleteFilter(textFieldName, textSearch))
+      Object.assign(filter, FilterHelper.buildAutocompleteFilter(textFieldName, textSearch));
     }
 
     if (limit === 0 || limit > maxResults) {
@@ -102,10 +102,10 @@ class BasicRead {
       }
 
       if (skip > 0) {
-        aggregation = aggregation.skip(skip)
+        aggregation = aggregation.skip(skip);
       }
       if (limit > 0) {
-        aggregation = aggregation.limit(limit)
+        aggregation = aggregation.limit(limit);
       }
 
       aggregation.exec()
@@ -114,7 +114,7 @@ class BasicRead {
         })
         .catch(readError => {
           WellKnownJsonRes.errorDebug(res, readError);
-        })
+        });
     })
     .catch(readCountError => {
       WellKnownJsonRes.errorDebug(res, readCountError);

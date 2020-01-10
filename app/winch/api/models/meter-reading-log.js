@@ -154,7 +154,7 @@ meterReadingLogSchema.index({
   background: true
 });
 
-const model = require('../middleware/mongoose').model('MeterReadingLog', meterReadingLogSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('MeterReadingLog', meterReadingLogSchema);
 
 
 module.exports = model;

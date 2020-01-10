@@ -94,7 +94,7 @@ plantGenerationLogSchema.index({
   background: true
 });
 
-const model = require('../middleware/mongoose').model('PlantGenerationLog', plantGenerationLogSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('PlantGenerationLog', plantGenerationLogSchema);
 
 
 module.exports = model;
