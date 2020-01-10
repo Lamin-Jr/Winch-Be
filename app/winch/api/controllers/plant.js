@@ -159,16 +159,17 @@ exports.aggregate_for_totalizers = (req, res, next) => {
   //
   if (req.body.filter) {
     if (req.body.filter.tsFrom) {
-      Object.assign(readingsFilter, { ts: { '$gte': req.body.filter.tsFrom } });
-      // TODO
-      // Object.assign(readingsFilter, isDailyPeriod
-      //   ? { ts: { '$gte': req.body.filter.tsFrom } }
-      //   : { tsf: { '$gte': req.body.filter.tsFrom } });
+      readingsFilter.ts = readingsFilter.ts || {};
+      readingsFilter.ts['$gte'] = new Date(req.body.filter.tsFrom);
     }
     if (req.body.filter.tsTo) {
-      Object.assign(readingsFilter, isDailyPeriod
-        ? { ts: { '$lte': req.body.filter.tsTo } }
-        : { tsf: { '$lte': req.body.filter.tsTo } });
+      if (isDailyPeriod) {
+        readingsFilter.ts = readingsFilter.ts || {};
+        readingsFilter.ts['$lte'] = new Date(req.body.filter.tsTo);
+      } else {
+        readingsFilter.tst = {};
+        readingsFilter.tst['$lte'] = new Date(req.body.filter.tsTo);
+      }
     }
     if (req.body.filter.plants && req.body.filter.plants.length) {
       Object.assign(getPlantIdsFilter, {
