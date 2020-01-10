@@ -149,11 +149,6 @@ exports.aggregate_for_totalizers = (req, res, next) => {
   const isDailyPeriod = req.params.period === 'daily';
   const readingsFilter = {
   };
-  // TODO
-  // const dailyReadingsFilter = {
-  // };
-  // const moreThanDailyReadingsFilter = {
-  // };
   const getPlantIdsFilter = {
     enabled: true
   };
@@ -164,28 +159,16 @@ exports.aggregate_for_totalizers = (req, res, next) => {
   //
   if (req.body.filter) {
     if (req.body.filter.tsFrom) {
-      Object.assign(readingsFilter, isDailyPeriod
-        ? { ts: { '$gte': req.body.filter.tsFrom } }
-        : { tsf: { '$gte': req.body.filter.tsFrom } });
+      Object.assign(readingsFilter, { ts: { '$gte': req.body.filter.tsFrom } });
       // TODO
-      // Object.assign(dailyReadingsFilter, {
-      //   "ts": { $gte: req.body.filter.tsFrom }
-      // });
-      // Object.assign(moreThanDailyReadingsFilter, {
-      //   "tsf": { $gte: req.body.filter.tsFrom }
-      // });
+      // Object.assign(readingsFilter, isDailyPeriod
+      //   ? { ts: { '$gte': req.body.filter.tsFrom } }
+      //   : { tsf: { '$gte': req.body.filter.tsFrom } });
     }
     if (req.body.filter.tsTo) {
       Object.assign(readingsFilter, isDailyPeriod
-        ? { ts: { $gte: req.body.filter.tsTo } }
-        : { tsf: { $gte: req.body.filter.tsTo } });
-      // TODO
-      // Object.assign(dailyReadingsFilter, {
-      //   "ts": { $gte: req.body.filter.tsTo }
-      // });
-      // Object.assign(moreThanDailyReadingsFilter, {
-      //   "tsf": { $gte: req.body.filter.tsTo }
-      // });
+        ? { ts: { '$lte': req.body.filter.tsTo } }
+        : { tsf: { '$lte': req.body.filter.tsTo } });
     }
     if (req.body.filter.plants && req.body.filter.plants.length) {
       Object.assign(getPlantIdsFilter, {
@@ -279,19 +262,14 @@ exports.aggregate_for_totalizers = (req, res, next) => {
       Object.assign(readingsFilter, {
         '$or': readingsPlantIdsOrList
       });
-      // TODO
-      // Object.assign(dailyReadingsFilter, {
-      //   '$or': readingsPlantIdsOrList
-      // });
-      // Object.assign(moreThanDailyReadingsFilter, {
-      //   '$or': readingsPlantIdsOrList
-      // });
     }
 
     // perform actual aggregation
     //
-    const schema = require('../../api/schemas/readings/meter-reading-daily-log');
-    const MeterReadingDaily = require('../middleware/mongoose-db-conn').driverDBConnRegistry.get('spm').model('MeterReadingDaily', schema);
+    const schema = require(`../../api/schemas/readings/meter-reading-${req.params.period}-log`);
+    const MeterReadingDaily = require('../middleware/mongoose-db-conn').driverDBConnRegistry
+      .get('spm')
+      .model(`MeterReading${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schema);
     aggregation = MeterReadingDaily.aggregate()
       .match(readingsFilter)
       .group(isDailyPeriod
@@ -302,9 +280,15 @@ exports.aggregate_for_totalizers = (req, res, next) => {
             'e-sold-local-currency' : { '$sum': '$e-sold-local-currency' }, 
         }
         : {
-          // TODO
-          _id: 1
-        })
+            _id: {
+                b: "$d",
+                e: "$dt"
+            },
+            "tsf" : { $first: "$ts" }, 
+            "tst" : { $first: "$tst" }, 
+            "e-sold-kwh" : { $sum: "$e-sold-kwh" }, 
+            "e-sold-local-currency" : { $sum: "$e-sold-local-currency" }, 
+        });
 
     if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
       aggregation = aggregation.sort(req._q.sort);
