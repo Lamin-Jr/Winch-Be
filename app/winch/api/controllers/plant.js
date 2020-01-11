@@ -278,7 +278,7 @@ exports.aggregate_for_totalizers = (req, res, next) => {
             _id: '$d',
             ts : { '$first': '$ts' }, 
             'e-sold-kwh' : { '$sum': '$e-sold-kwh' }, 
-            'e-sold-local-currency' : { '$sum': '$e-sold-local-currency' }, 
+            'e-sold-target-ccy' : { '$sum': '$e-sold-target-ccy' }, 
         }
         : {
             _id: {
@@ -288,7 +288,7 @@ exports.aggregate_for_totalizers = (req, res, next) => {
             "tsf" : { $first: "$ts" }, 
             "tst" : { $first: "$tst" }, 
             "e-sold-kwh" : { $sum: "$e-sold-kwh" }, 
-            "e-sold-local-currency" : { $sum: "$e-sold-local-currency" }, 
+            "e-sold-target-ccy" : { $sum: "$e-sold-target-ccy" }, 
         });
 
     if (JsonObjectHelper.isNotEmpty(req._q.sort)) {

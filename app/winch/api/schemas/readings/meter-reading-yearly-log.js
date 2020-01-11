@@ -8,7 +8,8 @@ const meterReadingYearlyLogSchema = mongoose.Schema({
   tsf: Date,
   tst: Date,
   'e-sold-kwh': Double,
-  'e-sold-local-currency': Double
+  'e-sold-local-ccy': Double,
+  'e-sold-target-ccy': Double,
 },
 {
   collection: 'meter-readings-yearly'
