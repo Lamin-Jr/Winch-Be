@@ -15,9 +15,9 @@ const {
 } = require('./winch-boot/utils')
 const { buildPlantParts } = require('./winch-boot/plant-part')
 const { buildPoles } = require('./winch-boot/pole')
-// const { buildMeters } = require('./winch-boot/meter') // [GP]
-// const { buildTariffs } = require('./winch-boot/tariffs') // [GP]
-//const { buildCustomers } = require('./winch-boot/customer') // [GP]
+// const { buildMeters } = require('./winch-boot/meter')
+// const { buildTariffs } = require('./winch-boot/tariffs') 
+// const { buildCustomers } = require('./winch-boot/customer') // [GP]
 const { buildExchangeRates } = require('./winch-boot/exchange-rate')
 
 
@@ -296,13 +296,15 @@ function getPlantStatusByPlantName() {
   return {
     'Adido': regular,
     'Batkanu': regular,
+    'Fintonia': regular,
     'Kagbere': regular,
     'Kamaranka': regular,
+    'Kathantha Yimboi': regular,
     'Mabang': regular,
     'Mara': regular,
     'Rokonta': regular,
     'Nimjat RPU001': commFailure,
-    'Nimjat RPU002': commFailure,
+    'Nimjat RPU002': regular,
     'Koglo Kope': techWarn,
   }
 }

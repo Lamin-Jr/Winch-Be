@@ -1,9 +1,13 @@
 const mongoose = require('mongoose');
-const Meter = require('../../app/winch/api/models/meter');
+
 const mongooseMixins = require('../../api/middleware/mongoose-mixins');
+
 const creatorFragment = mongooseMixins.makeCreator(
   new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID),
   process.env.WCH_AUTHZ_SYSTEM_ROLE);
+
+const Meter = require('../../app/winch/api/models/meter');
+
 
 module.exports.buildMeters = () => {
   return new Promise((resolve, reject) => {

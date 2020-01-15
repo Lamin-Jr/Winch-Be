@@ -25,11 +25,11 @@ const tariffSchema = mongoose.Schema({
         type: Double,
         required: true
       },
-      amount: {
+      qty: {
         type: Double
       },
       unit: {
-        type: String,
+        type: Double,
         required: true
       }
     },
@@ -46,11 +46,11 @@ const tariffSchema = mongoose.Schema({
         type: Double,
         required: true
       },
-      amount: {
+      qty: {
         type: Double
       },
       unit: {
-        type: String,
+        type: Double,
         required: true
       }
     }],
@@ -74,15 +74,17 @@ const tariffSchema = mongoose.Schema({
       type: Double,
       required: true
     },
-    amount: {
+    qty: {
       type: Double
     },
     unit: {
       type: String,
       required: true
     },
-    'allow-overbooking': Boolean,
-    'cycle-start': Number
+    timing: {
+      'billing-day-of-month': Number,
+      'unuse-daily-discount': Double
+    }
   },
   'limit': {
     e: {

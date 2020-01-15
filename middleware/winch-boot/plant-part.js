@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
+
 const Plant = require('../../app/winch/api/models/plant');
-const PlantPart = require('../../app/winch/api/models/plant-part');
+
 const Part = require('../../app/winch/api/models/part');
+const PlantPart = require('../../app/winch/api/models/plant-part');
+
 
 module.exports.buildPlantParts = () => {
   return new Promise((resolve, reject) => {

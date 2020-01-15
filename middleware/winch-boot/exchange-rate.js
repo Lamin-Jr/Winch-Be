@@ -11,6 +11,7 @@ const { defaultUpdateOptions } = require('../../api/middleware/mongoose-util');
 
 const ExchangeRate = require('../../app/winch/api/models/exchange-rate');
 
+
 module.exports.buildExchangeRates = () => {
   return new Promise((resolve, reject) => {
     const defaultFrom = new Date();

@@ -12,6 +12,7 @@ const { buildFeaturesCollection } = require('../winch-boot/utils');
 
 const Pole = require('../../app/winch/api/models/pole');
 
+
 module.exports.buildPoles = () => {
   return new Promise((resolve, reject) => {
     const poles = getPoles();
@@ -29,21 +30,21 @@ module.exports.buildPoles = () => {
         }
       };
       Pole.findOneAndUpdate(filter, update, defaultUpdateOptions)
-        .then(upsertResult => {
-          if (upsertResult) {
-            console.log(`'${pole['code']}' pole update succeeded with id: ${upsertResult._id}`);
+        .then(updateResult => {
+          if (updateResult) {
+            console.log(`'${pole['code']}' pole update succeeded with id: ${updateResult._id}`);
           } else {
               Pole.create(pole)
               .then(createResult => {
-                console.log(`'${pole['code']}' pole creation succeeded with id: ${createResult._id}`);
+                console.log(`'${createResult['code']}' pole creation succeeded with id: ${createResult._id}`);
               })
               .catch(createError => {
                 console.error(`'${pole['code']}' pole creation error: ${createError}`);
               });
           }
         })
-        .catch(upsertError => {
-          console.error(`'${pole.code}' pole creation error: ${upsertError}`);
+        .catch(updateError => {
+          console.error(`'${pole.code}' pole creation error: ${updateError}`);
         })
         .finally(() => {
           if (index === poles.length - 1) {

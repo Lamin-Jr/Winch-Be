@@ -37,7 +37,7 @@ exports.create = (req, res, next) => {
             WellKnownJsonRes.errorDebug(res, err);
           } else {
             const account = new Account({
-              _id: new mongoose.Types.OErrorbjectId,
+              _id: new mongoose.Types.ObjectId,
               provider: req.body.provider,
               username: req.body.username,
               nickname: req.body.nickname,

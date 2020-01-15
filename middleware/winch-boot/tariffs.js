@@ -1,47 +1,119 @@
 const mongoose = require('mongoose');
+
 const mongooseMixins = require('../../api/middleware/mongoose-mixins');
-const Tariffs = require('../../app/winch/api/models/tariff');
-// const {
-// buildFeaturesCollection,
-// } = require('../winch-boot/utils')
+const { defaultUpdateOptions } = require('../../api/middleware/mongoose-util');
+
 const creatorFragment = mongooseMixins.makeCreator(
   new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID),
   process.env.WCH_AUTHZ_SYSTEM_ROLE);
 
+const now = new Date(new Date().setUTCHours(0, 0, 0, 0));
+
+const Tariff = require('../../app/winch/api/models/tariff');
+  
+  
 module.exports.buildTariffs = () => {
   return new Promise((resolve, reject) => {
-    const tariff = getTariffs();
+    const tariffs = getTariffs();
 
-    tariff.forEach((tariff, index) => {
+    tariffs.forEach((tariff, index) => {
+      const id = tariff._id;
+      const filter = {
+        _id: id
+      };
+      const update = {
+        $set: {
+          base: tariff.base,
+          'standing-charge': tariff['standing-charge'],
+          plant: tariff.plant
+        }
+      };
 
-      Tariffs.create(tariff)
-        .then(createResult => {
-          console.log(`'${createResult['name']}' Trariff creation succeeded with id: ${createResult._id}`);
-        })
-        .catch(createError => {
-          if (createError.name === 'MongoError' && createError.code === 11000) {
-            console.log(`'${tariff['name']}' tariff creation already done`);
+      Tariff.findOneAndUpdate(filter, update, defaultUpdateOptions)
+        .then(updateResult => {
+          if (updateResult) {
+            console.log(`'${tariff['name']}' tariff update succeeded with id: ${updateResult._id}`);
           } else {
-            console.error(`'${tariff['name']}' tariff creation error: ${createError}`);
-          }
+            Tariffs.create(tariff)
+            .then(createResult => {
+              console.log(`'${createResult['name']}' tariff creation succeeded with id: ${createResult._id}`);
+            })
+            .catch(createError => {
+              console.error(`'${tariff['name']}' tariff creation error: ${createError}`);
+            })
+              }
+        })
+        .catch(updateError => {
+          console.error(`'${tariff.name}' pole creation error: ${updateError}`);
         })
         .finally(() => {
-          if (index === tariff.length - 1) {
+          if (index === tariffs.tariffs - 1) {
             resolve();
           }
         });
-
-      
       });
-
-  
   });
 };
 
+function getTariffs() {
+  return [
+    buildTariff(new mongoose.Types.ObjectId('5e1597d640bf2c0cb48b066a'), 'Eclairange Public BT3', 'XOF', now, 2100, 
+                buildTariffBase(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 144, qty: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '01:00', max: 700 }, { from: '01:00', to: '19:00', max: 0 }, { from: '19:00', to: '00:00', max: 700 } ]), '|BEN|BEN_2019_005|1|'  ),
+    buildTariff(new mongoose.Types.ObjectId('5e15e5654f832005accc64b3'), 'Professionel BT2', 'XOF', now, 2100,
+                buildTariffBase(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 131, qty: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '08:00', max: 900 }, { from: '08:00', to: '18:00', max: 1800 }, { from: '18:00', to: '00:00', max: 900 }]), '|BEN|BEN_2019_005|1|'),
+    buildTariff(new mongoose.Types.ObjectId('5e15e7572ac0c54738b3d99e'), 'Professionel BT2 Cold Room', 'XOF', now, 2100,
+                buildTariffBase(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 131, qty: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '23:00', max: 10000 }]), '|BEN|BEN_2019_005|1|'),
+    buildTariff(new mongoose.Types.ObjectId('5e15e7572ac0c54738b3d99f'), 'Professionel BT2 Station AEV', 'XOF', now, 2100,
+                buildTariffBase(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 131, qty: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '23:00', max: 10000 }]), '|BEN|BEN_2019_005|1|'),
+    buildTariff(new mongoose.Types.ObjectId('5e15e7572ac0c54738b3d9a0'), 'Residential Tranche 1', 'XOF', now, 2100,
+                buildTariffBase(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 129, qty: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '08:00', max: 350 }, { from: '08:00', to: '18:00', max: 700 }, { from: '18:00', to: '00:00', max: 350 }]), '|BEN|BEN_2019_005|1|'),
+    buildTariff(new mongoose.Types.ObjectId('5e15e7572ac0c54738b3d9a1'), 'Residential Tranche 2', 'XOF', now, 2100,
+                buildTariffBase(2100, 1, 'XOF/kWh', 
+                                buildTariffSchedule([{ from: '00:00', to: '00:00', cost: 136, qty: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }])
+                                buildTariffVolumes(volumesarray)
+
+                ), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '08:00', max: 900 }, { from: '08:00', to: '18:00', max: 1800 }, { from: '18:00', to: '00:00', max: 900 }]), '|BEN|BEN_2019_005|1|'),
+  ];
+}
+
+function buildTariff(id, name, currency, validity, connFeeCost, base, standing, limit, plant) {
+  const result = {
+    _id: id,
+    ...creatorFragment,
+    ...mongooseMixins.makeHistoryOnCreate(now, id),
+    name: name,
+    currency: currency,
+    validity: validity,
+    'conn-fee': {
+      cost: connFeeCost
+    },
+    base: base,
+    'standing-charge': standing,
+    'limit': limit,
+    plant: plant
+  };
+
+  return result;
+}
 
 
+function buildTariffBase(flat, scheduled, volumes) {
+  return {
+    flat: flat,
+    scheduled: scheduled,
+    volumes: volumes,
+  }
+}
 
-function buildSchedTariff(tariffarray) {
+function buildTariffFlat(cost, qty, unit) {
+  return {
+    cost: cost,
+    qty: qty,
+    unit: unit
+  }
+}
+
+function buildTariffSchedule(tariffarray) {
   let arrtariff = []
 
  tariffarray.forEach((res, index) => {
@@ -49,7 +121,7 @@ function buildSchedTariff(tariffarray) {
      from: res.from,
      to: res.to,
      cost: res.cost,
-     amount: res.amount,
+     qty: res.qty,
      unit: res.unit
    })
 
@@ -58,7 +130,7 @@ function buildSchedTariff(tariffarray) {
   return arrtariff;
 }
 
-function buildVolumesTariff(volumesarray) {
+function buildTariffVolumes(volumesarray) {
   let arrtariff = [];
   volumesarray.forEach(res => {
     arrtariff.push({
@@ -70,20 +142,6 @@ function buildVolumesTariff(volumesarray) {
   })
 
   return arrtariff;
-}
-
-function buildBaseTariff(flatcost, flatamt, flatunit, tariffarray, volumesarray ) {
-  return {
-    
-      flat: {
-        cost: flatcost,
-        amount:flatamt,
-        unit: flatunit
-      },
-      scheduled: buildSchedTariff(tariffarray),
-      volumes: buildVolumesTariff(volumesarray)
- 
-}
 }
 
 function buildLimitTariff(daily, flat, arraysched ){
@@ -114,11 +172,11 @@ function buildLimitTariff(daily, flat, arraysched ){
 
 }
 
-function buildStandingTariff(unit, cost, amount) {
+function buildStandingTariff(unit, cost, qty) {
 
   standing = {
     cost: cost,
-    amount: amount,
+    qty: qty,
     unit: unit,
     'allow-overbooking': false,
     'cycle-start': 1
@@ -126,35 +184,3 @@ function buildStandingTariff(unit, cost, amount) {
   return standing
 }
 
-function getTariffs() {
-  return [
-    buildTariff(new mongoose.Types.ObjectId('5e1597d640bf2c0cb48b066a'), 'Eclairange Public BT3', 'XOF', new Date(), 2100, buildBaseTariff(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 144, amount: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '01:00', max: 700 }, { from: '01:00', to: '19:00', max: 0 }, { from: '19:00', to: '00:00', max: 700 } ]), '|BEN|BEN_2019_005|1|'  ),
-    buildTariff(new mongoose.Types.ObjectId('5e15e5654f832005accc64b3'), 'Professionel BT2', 'XOF', new Date(), 2100, buildBaseTariff(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 131, amount: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '08:00', max: 900 }, { from: '08:00', to: '18:00', max: 1800 }, { from: '18:00', to: '00:00', max: 900 }]), '|BEN|BEN_2019_005|1|'),
-    buildTariff(new mongoose.Types.ObjectId('5e15e7572ac0c54738b3d99e'), 'Professionel BT2 Cold Room', 'XOF', new Date(), 2100, buildBaseTariff(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 131, amount: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '23:00', max: 10000 }]), '|BEN|BEN_2019_005|1|'),
-    buildTariff(new mongoose.Types.ObjectId('5e15e7572ac0c54738b3d99f'), 'Professionel BT2 Station AEV', 'XOF', new Date(), 2100, buildBaseTariff(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 131, amount: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '23:00', max: 10000 }]), '|BEN|BEN_2019_005|1|'),
-    buildTariff(new mongoose.Types.ObjectId('5e15e7572ac0c54738b3d9a0'), 'Residential Tranche 1', 'XOF', new Date(), 2100, buildBaseTariff(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 129, amount: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '08:00', max: 350 }, { from: '08:00', to: '18:00', max: 700 }, { from: '18:00', to: '00:00', max: 350 }]), '|BEN|BEN_2019_005|1|'),
-    buildTariff(new mongoose.Types.ObjectId('5e15e7572ac0c54738b3d9a1'), 'Residential Tranche 2', 'XOF', new Date(), 2100, buildBaseTariff(2100, 1, 'XOF/kWh', [{ from: '00:00', to: '00:00', cost: 136, amount: 1, unit: 'XOF/kWh' }], [{ from: 0.0, to: 0.0, factor: 0.0 }]), buildStandingTariff('month', 2100, 1), buildLimitTariff(0, 0, [{ from: '00:00', to: '08:00', max: 900 }, { from: '08:00', to: '18:00', max: 1800 }, { from: '18:00', to: '00:00', max: 900 }]), '|BEN|BEN_2019_005|1|'),
-  ];
-}
-
-
-function buildTariff(id, nametariff, currency, validity, connfee, base, standing, limit, plant, ) {
-  const result = {
-    _id: id,
-    ...creatorFragment,
-    ...mongooseMixins.makeHistoryOnCreate(new Date(), id, undefined, undefined),
-    name: nametariff,
-    currency: currency,
-    validity: validity, // new date
-    'conn-fee': {
-      cost: connfee
-    }, // cost: {double}
-    base: base, // this contain flat { const: double, amount: double, unit: string}
-    'standing-charge': standing, // cost: double, amount: double, unit: string, 'allow-overbooking': boolean, 'cycle-start': number
-    'limit': limit, // e: {daily: double} , p: {flat: { max: double}, scheduled: [{from: string, to: string, max: double}]} 
-    plant: plant
-  
-  };
-
-  return result;
-}
