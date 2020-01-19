@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
+const Double = require('@mongoosejs/double')
 
 const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
-const Double = require('@mongoosejs/double') // [GP] 
 const Tariff = require('./tariff')
 
 const customerSchema = mongoose.Schema({

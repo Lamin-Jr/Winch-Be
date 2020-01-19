@@ -40,27 +40,27 @@ exports.aggregate_for_map = (req, res, next) => {
   let locationsFilter = undefined;
 
   if (req.body.filter) {
-    if (req.body.filter.plants && req.body.filter.plants.length > 0) {
+    if (req.body.filter.plants && req.body.filter.plants.length) {
       Object.assign(plantsFilter, {
         _id: { '$in': req.body.filter.plants }
       })
     }
-    if (req.body.filter.projects && req.body.filter.projects.length > 0) {
+    if (req.body.filter.projects && req.body.filter.projects.length) {
       Object.assign(plantsFilter, {
         'project.id': { '$in': req.body.filter.projects }
       })
     }
-    if (req.body.filter['plants-status'] && req.body.filter['plants-status'].length > 0) {
+    if (req.body.filter['plants-status'] && req.body.filter['plants-status'].length) {
       plantsStatusFilter = {
         'monitor.status': { '$in': req.body.filter['plants-status'] }
       }
     }
-    if (req.body.filter.villages && req.body.filter.villages.length > 0) {
+    if (req.body.filter.villages && req.body.filter.villages.length) {
       locationsFilter = {
         'village._id': { '$in': req.body.filter.villages.map(idAsString => new mongoose.Types.ObjectId(idAsString)) }
       }
     }
-    if (req.body.filter.countries && req.body.filter.countries.length > 0) {
+    if (req.body.filter.countries && req.body.filter.countries.length) {
       if (!locationsFilter) {
         locationsFilter = {}
       }
