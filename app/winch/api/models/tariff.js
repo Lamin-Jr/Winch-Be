@@ -6,7 +6,11 @@ const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
 const tariffSchema = mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId,
   ...mongooseMixins.fullCrudActors,
-  ...mongooseMixins.history,
+  enabled: Boolean,
+  readingsId: {
+    type: String,
+    required: true
+  },
   name: {
     type: String,
     required: true
@@ -107,11 +111,30 @@ const tariffSchema = mongoose.Schema({
       }]
     }
   },
+  origin: Object,
+  driver: {
+    type: String,
+    required: true
+  },
   plant: String
 }, { 
   collection: 'tariffs',
   ...mongooseMixins.fullCrudActorsTs
 });
+
+tariffSchema.index({
+  'enabled': 1
+}, {
+  name: 'enabled',
+  background: true
+});
+tariffSchema.index({
+  'plant': 1
+}, {
+  name: 'plant-asc',
+  background: true
+});
+
 
 const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Tariff', tariffSchema);
 

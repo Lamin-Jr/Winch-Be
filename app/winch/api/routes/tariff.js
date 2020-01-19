@@ -12,9 +12,9 @@ const setAppName = require('../middleware/rest/set-app-name');
 
 //
 // public
-router.get('/', queryParser, TariffCtrl.read_by_query);
+router.get('/', checkAuth, setAppName, retrieveUserProfile, queryParser, TariffCtrl.read_by_query);
 
-router.get('/autocomplete', queryParser, TariffCtrl.autocomplete);
+router.get('/autocomplete', checkAuth, setAppName, retrieveUserProfile, queryParser, TariffCtrl.autocomplete);
 
 //
 // token-protected

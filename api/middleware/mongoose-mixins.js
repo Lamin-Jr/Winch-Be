@@ -10,6 +10,12 @@ module.exports.makeCreator = (creatorId, role) => {
         }
     }
 }
+module.exports.makeCreatorCompact = (creatorId, role) => {
+    return {
+        '_crtr._id': creatorId,
+        '_crtr.role': role
+    }
+}
 module.exports.makeCreatorByUserData = (userData) => {
     return this.makeCreator(new mongoose.Types.ObjectId(userData._id), userData.role);
 }
@@ -51,6 +57,15 @@ module.exports.makeLastUpdater = (updaterId, role) => {
             role: role
         }
     }
+}
+module.exports.makeLastUpdaterCompact = (updaterId, role) => {
+    return {
+        '_last-updtr._id': updaterId,
+        '_last-updtr.role': role
+    }
+}
+module.exports.makeCreatorByUserData = (userData) => {
+    return this.makeLastUpdater(new mongoose.Types.ObjectId(userData._id), userData.role);
 }
 
 module.exports.lastUpdater = {

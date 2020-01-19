@@ -10,9 +10,12 @@ const customerSchema = mongoose.Schema({
   enabled: Boolean,
   customerType: String,
   ...mongooseMixins.makePersonModel(),
+  fullName: { 
+    type: String,
+    required: true
+  },
   geo: mongoose.Schema.Types.FeatureCollection,
-  meter: String,  // [GP] BEFORE mongoose.Schema.Types.ObjectId
-  tariff: [Tariff], // [GP] BEFORE Tariff 
+  tariff: Tariff,
   'next-tariff': {
     _id: mongoose.Schema.Types.ObjectId,
     from: Date
@@ -21,11 +24,28 @@ const customerSchema = mongoose.Schema({
     'startup-ts': Date,
     'total-people-served': Number,
     'startup-read': Double
-  }
+  },
+  origin: Object,
+  driver: {
+    type: String,
+    required: true
+  },
+  plant: {
+    type: String
+  },
+  meter: String
 }, { 
   collection: 'customers',
   ...mongooseMixins.fullCrudActorsTs,
 });
+
+customerSchema.index({
+  meter: 1
+}, {
+  name: 'meter-asc',
+  background: true
+});
+
 
 const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Customer', customerSchema);
 
