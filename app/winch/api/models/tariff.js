@@ -125,7 +125,7 @@ const tariffSchema = mongoose.Schema({
 tariffSchema.index({
   'enabled': 1
 }, {
-  name: 'enabled',
+  name: 'enabled-asc',
   background: true
 });
 tariffSchema.index({

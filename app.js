@@ -71,14 +71,14 @@ app.use('/winch/plants/aggregates', require('./app/winch/api/routes/plant-aggreg
 app.use('/winch/plants', require('./app/winch/api/routes/plant'));
 app.use('/winch/villages', require('./app/winch/api/routes/village'));
 app.use('/winch/countries', require('./app/winch/api/routes/country'));
-app.use('/winch/reports', require('./app/winch/api/routes/report'))
-app.use('/winch/meters', require('./app/winch/api/routes/meter'));
 app.use('/winch/poles', require('./app/winch/api/routes/pole'));
 app.use('/winch/tariffs', require('./app/winch/api/routes/tariff'));
+app.use('/winch/meters', require('./app/winch/api/routes/meter'));
+app.use('/winch/customers', require('./app/winch/api/routes/customer'));
 app.use('/winch/exchange-rates', require('./app/winch/api/routes/exchange-rate')); // [GP]
+app.use('/winch/reports', require('./app/winch/api/routes/report'))
 // app.use('/winch/transactions', require('./app/winch/api/routes/transaction'));
 // app.use('/winch/agents', require('./app/winch/api/routes/agents'));
-// app.use('/winch/customers', require('./app/winch/api/routes/customer'));
 app.use('/winch/app', require('./app/winch/api/routes/app'));
 
 //

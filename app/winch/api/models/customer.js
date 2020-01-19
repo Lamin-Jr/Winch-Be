@@ -7,7 +7,6 @@ const Tariff = require('./tariff')
 const customerSchema = mongoose.Schema({
   _id: String,
   ...mongooseMixins.fullCrudActors,
-  enabled: Boolean,
   customerType: String,
   ...mongooseMixins.makePersonModel(),
   fullName: { 
@@ -15,7 +14,7 @@ const customerSchema = mongoose.Schema({
     required: true
   },
   geo: mongoose.Schema.Types.FeatureCollection,
-  tariff: Tariff,
+  tariff: Tariff.schema,
   'next-tariff': {
     _id: mongoose.Schema.Types.ObjectId,
     from: Date
@@ -31,7 +30,8 @@ const customerSchema = mongoose.Schema({
     required: true
   },
   plant: {
-    type: String
+    type: String,
+    required: true
   },
   meter: String
 }, { 
@@ -39,6 +39,12 @@ const customerSchema = mongoose.Schema({
   ...mongooseMixins.fullCrudActorsTs,
 });
 
+customerSchema.index({
+  plant: 1
+}, {
+  name: 'plant-asc',
+  background: true
+});
 customerSchema.index({
   meter: 1
 }, {
