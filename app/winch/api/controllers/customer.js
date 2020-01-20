@@ -74,6 +74,7 @@ exports.aggregate_for_customer = (req, res, next) => {
     _id: 1,
     customerType: 1,
     fullName: 1,
+    contacts: 1,
     stats: 1,
     driver: 1,
     'plant._id': 1, 

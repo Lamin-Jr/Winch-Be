@@ -13,6 +13,13 @@ const customerSchema = mongoose.Schema({
     type: String,
     required: true
   },
+  contacts: {
+    type: Array,
+    items: {
+      type: Object,
+      properties: mongooseMixins.makeContactModel()
+    }
+  },
   geo: mongoose.Schema.Types.FeatureCollection,
   tariff: Tariff.schema,
   'next-tariff': {
