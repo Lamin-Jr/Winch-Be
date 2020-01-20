@@ -32,41 +32,43 @@ exports.autocomplete = (req, res, next) => {
 
 // cRud/aggregateForCustomer
 exports.aggregate_for_customer = (req, res, next) => {
-  const plantsFilter = {
-  }
-
-  let plantsStatusFilter = undefined;
-  let locationsFilter = undefined;
+  let hasPlantFilter = false;
+  const plantsFilter = {};
+  let hasPostPlantLookupFilter = false;
+  const postPlantLookupFilter = {};
+  let hasLocationsFilter = false;
+  const locationsFilter = {};
 
   if (req.body.filter) {
     if (req.body.filter.plants && req.body.filter.plants.length) {
+      hasPlantFilter = true;
       Object.assign(plantsFilter, {
         plant: { '$in': req.body.filter.plants }
-      })
+      });
     }
     if (req.body.filter.projects && req.body.filter.projects.length) {
-      Object.assign(plantsFilter, {
+      hasPostPlantLookupFilter = true;
+      Object.assign(postPlantLookupFilter, {
         'plant.project.id': { '$in': req.body.filter.projects }
-      })
+      });
     }
     if (req.body.filter['plants-status'] && req.body.filter['plants-status'].length) {
-      plantsStatusFilter = {
+      hasPostPlantLookupFilter = true;
+      Object.assign(postPlantLookupFilter, {
         'plant.monitor.status': { '$in': req.body.filter['plants-status'] }
-      }
+      });
     }
     if (req.body.filter.villages && req.body.filter.villages.length) {
-      locationsFilter = {
+      hasLocationsFilter = true;
+      Object.assign(locationsFilter, {
         'plant.village._id': { '$in': req.body.filter.villages.map(idAsString => new mongoose.Types.ObjectId(idAsString)) }
-      }
+      });
     }
     if (req.body.filter.countries && req.body.filter.countries.length) {
-      if (!locationsFilter) {
-        locationsFilter = {}
-      }
-
+      hasLocationsFilter = true;
       Object.assign(locationsFilter, {
         'plant.village.country._id': { '$in': req.body.filter.countries }
-      })
+      });
     }
   }
 
@@ -86,8 +88,13 @@ exports.aggregate_for_customer = (req, res, next) => {
     'meter': 1,
   };
 
-  let aggregation = Customer.aggregate()
-    .match(plantsFilter)
+  let aggregation = Customer.aggregate();
+
+  if (hasPlantFilter) {
+    aggregation = aggregation.match(plantsFilter);
+  }
+
+  aggregation = aggregation
     .lookup({
       from: 'plants',
       localField: 'plant',
@@ -105,8 +112,8 @@ exports.aggregate_for_customer = (req, res, next) => {
     .project(project)
     ;
 
-  if (plantsStatusFilter) {
-    aggregation = aggregation.match(plantsStatusFilter);
+  if (hasPostPlantLookupFilter) {
+      aggregation = aggregation.match(postPlantLookupFilter);
   }
 
   delete project['plant.village'];
@@ -144,7 +151,7 @@ exports.aggregate_for_customer = (req, res, next) => {
     .unwind('$meter')
   ;
 
-  if (locationsFilter) {
+  if (hasLocationsFilter) {
     aggregation = aggregation.match(locationsFilter);
   }
 
