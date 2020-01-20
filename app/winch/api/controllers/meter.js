@@ -110,11 +110,15 @@ exports.aggregate_for_meter = (req, res, next) => {
   }
 
   delete project['plant.village'];
+  delete project['customer'];
   Object.assign(project, {
     'plant.village._id': 1,
     'plant.village.name': 1,
     'plant.village.country._id': 1,
     'plant.village.country.default-name': 1,
+    'customer._id': 1,
+    'customer.customerType': 1,
+    'customer.fullName': 1,
   });
 
   aggregation = aggregation
@@ -132,6 +136,13 @@ exports.aggregate_for_meter = (req, res, next) => {
       as: 'plant.village.country'
     })
     .unwind('$plant.village.country')
+    .lookup({
+      from: 'customers',
+      localField: 'customer',
+      foreignField: '_id',
+      as: 'customer'
+    })
+    .unwind('$customer')
   ;
 
   if (locationsFilter) {
