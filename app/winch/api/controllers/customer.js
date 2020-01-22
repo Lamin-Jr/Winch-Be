@@ -125,6 +125,7 @@ exports.aggregate_for_customer = (req, res, next) => {
     'plant.village.country.default-name': 1,
     'meter._id': 1, 
     'meter.hw.serial-no': 1,
+    consumption: 1,
   });
 
   aggregation = aggregation
@@ -149,6 +150,16 @@ exports.aggregate_for_customer = (req, res, next) => {
       as: 'meter'
     })
     .unwind('$meter')
+    .lookup({
+      from: 'customers-consumption',
+      localField: '_id',
+      foreignField: '_id',
+      as: 'consumption'
+    })
+    .unwind({
+      path : "$consumption",
+      preserveNullAndEmptyArrays : true
+    })
   ;
 
   if (hasLocationsFilter) {
