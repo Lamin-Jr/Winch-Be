@@ -16,6 +16,7 @@ const {
 const { buildPlantParts } = require('./winch-boot/plant-part')
 const { buildPoles } = require('./winch-boot/pole')
 const { buildExchangeRates } = require('./winch-boot/exchange-rate')
+const { buildAgents } = require('./winch-boot/agent')
 
 const creator = new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID);
 const creatorRole = process.env.WCH_AUTHZ_SYSTEM_ROLE;
@@ -681,6 +682,7 @@ exports.boot = () => {
   .then(() => buildPlantParts())
   .then(() => buildPoles())
   .then(() => buildExchangeRates())
+  .then(() => buildAgents())
   .catch(error => {
     console.error(`errors encountered during winch database population: ${error}`);
   })
