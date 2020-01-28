@@ -144,8 +144,180 @@ aggregation = aggregation
   BasicRead.aggregate(req, res, next, Plant, aggregation, req._q.skip, req._q.limit);
 };
 
-// cRud/aggregateForTotalizers
-exports.aggregate_for_totalizers = (req, res, next) => {
+// cRud/aggregateForGenTotalizers
+exports.aggregate_for_gen_totalizers = (req, res, next) => {
+  const isDailyPeriod = req.params.period === 'daily';
+  const readingsFilter = {
+  };
+  const getPlantIdsFilter = {
+    enabled: true
+  };
+  let plantsStatusFilter = undefined;
+  let locationsFilter = undefined;
+
+  // retrieve totalizers filter: plant ids + date range
+  //
+  if (req.body.filter) {
+    if (req.body.filter.tsFrom) {
+      readingsFilter.ts = readingsFilter.ts || {};
+      readingsFilter.ts['$gte'] = new Date(req.body.filter.tsFrom);
+    }
+    if (req.body.filter.tsTo) {
+      if (isDailyPeriod) {
+        readingsFilter.ts = readingsFilter.ts || {};
+        readingsFilter.ts['$lte'] = new Date(req.body.filter.tsTo);
+      } else {
+        readingsFilter.tst = {};
+        readingsFilter.tst['$lte'] = new Date(req.body.filter.tsTo);
+      }
+    }
+    if (req.body.filter.plants && req.body.filter.plants.length) {
+      Object.assign(getPlantIdsFilter, {
+        _id: { '$in': req.body.filter.plants }
+      })
+    }
+    if (req.body.filter.projects && req.body.filter.projects.length) {
+      Object.assign(getPlantIdsFilter, {
+        'project.id': { '$in': req.body.filter.projects }
+      })
+    }
+    if (req.body.filter['plants-status'] && req.body.filter['plants-status'].length) {
+      plantsStatusFilter = {
+        'monitor.status': { '$in': req.body.filter['plants-status'] }
+      }
+    }
+    if (req.body.filter.villages && req.body.filter.villages.length) {
+      locationsFilter = {
+        'village._id': { '$in': req.body.filter.villages.map(idAsString => new mongoose.Types.ObjectId(idAsString)) }
+      }
+    }
+    if (req.body.filter.countries && req.body.filter.countries.length) {
+      if (!locationsFilter) {
+        locationsFilter = {}
+      }
+      Object.assign(locationsFilter, {
+        'village.country': { '$in': req.body.filter.countries }
+      })
+    }
+  }
+
+  const project = {
+    project: 1,
+    village: 1,
+    'monitor.status': 1,
+  };
+  
+  let aggregation = Plant.aggregate()
+    .match(getPlantIdsFilter)
+    .lookup({
+      from: 'plants-status',
+      localField: '_id',
+      foreignField: '_id',
+      as: 'monitor'
+    })
+    .unwind('$monitor')
+    .project(project);
+
+  if (plantsStatusFilter) {
+    aggregation = aggregation.match(plantsStatusFilter);
+  }
+
+  {
+    const projectFields = Object.getOwnPropertyNames(project);
+    for (var i = 0; i < projectFields.length; i++) {
+      delete project[projectFields[i]];
+    }
+  }
+  project._id = 1
+
+  aggregation = aggregation
+    .lookup({
+      from: 'villages',
+      localField: 'village',
+      foreignField: '_id',
+      as: 'village'
+    })
+    .unwind('$village');
+
+  if (locationsFilter) {
+    aggregation = aggregation.match(locationsFilter);
+  }
+  aggregation = aggregation.project(project);
+  aggregation = aggregation.allowDiskUse(true);
+
+  aggregation.exec()
+  .then(readResult => {
+    if (!readResult.length) {
+      WellKnownJsonRes.okMulti(res);
+      return;
+    }
+    const readingsPlantIdsOrList = [];
+    readResult.map(itemBody => itemBody._id).forEach((plantId) => {
+      const plantIdTokens = plantId.split('|');
+        readingsPlantIdsOrList.push({
+          _id: new RegExp(`^\\|${plantIdTokens[1]}\\|${plantIdTokens[2]}\\|${plantIdTokens[3]}\\|.*`)
+        });
+    });
+  
+    if (readingsPlantIdsOrList.length) {
+      Object.assign(readingsFilter, {
+        '$or': readingsPlantIdsOrList
+      });
+    }
+
+    // perform actual aggregation
+    //
+    const schema = require(`../../api/schemas/readings/gen-reading-${req.params.period}-log`);
+    const GenReadingDaily = require('../middleware/mongoose-db-conn').driverDBConnRegistry
+      .get('mcl')
+      .model(`GenReading${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schema);
+    aggregation = GenReadingDaily.aggregate()
+      .match(readingsFilter)
+      .group(isDailyPeriod
+        ? {
+            _id: '$d',
+            ts : { '$first': '$ts' }, 
+            'batt-t-in': { '$avg': '$batt-t-in' },
+            'e-delivered': { '$sum': '$e-delivered' },
+            'e-self-cons': { '$sum': '$e-self-cons' },
+            'sens-irrad': { '$avg': '$sens-irrad' },
+            'sens-t-in': { '$avg': '$sens-t-in' },
+            'sens-t-mod': { '$avg': '$sens-t-mod' },
+            'sens-t-out': { '$avg': '$sens-t-out' },
+        }
+        : {
+            _id: {
+                b: '$d',
+                e: '$dt'
+            },
+            'tsf' : { $first: '$ts' }, 
+            'tst' : { $first: '$tst' }, 
+            'batt-t-in': { '$avg': '$batt-t-in' },
+            'e-delivered': { '$sum': '$e-delivered' },
+            'e-self-cons': { '$sum': '$e-self-cons' },
+            'sens-irrad': { '$avg': '$sens-irrad' },
+            'sens-t-in': { '$avg': '$sens-t-in' },
+            'sens-t-mod': { '$avg': '$sens-t-mod' },
+            'sens-t-out': { '$avg': '$sens-t-out' },
+        });
+
+    if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
+      aggregation = aggregation.sort(req._q.sort);
+    }  
+
+    if (JsonObjectHelper.isNotEmpty(req._q.proj)) {
+      aggregation = aggregation.project(req._q.proj);
+    }
+
+    BasicRead.aggregate(req, res, next, GenReadingDaily, aggregation, req._q.skip, req._q.limit);
+  })
+  .catch(readError => {
+    WellKnownJsonRes.errorDebug(res, readError);
+  });
+};
+
+// cRud/aggregateForSoldTotalizers
+exports.aggregate_for_sold_totalizers = (req, res, next) => {
   const isDailyPeriod = req.params.period === 'daily';
   const readingsFilter = {
   };
@@ -282,13 +454,13 @@ exports.aggregate_for_totalizers = (req, res, next) => {
         }
         : {
             _id: {
-                b: "$d",
-                e: "$dt"
+                b: '$d',
+                e: '$dt'
             },
-            "tsf" : { $first: "$ts" }, 
-            "tst" : { $first: "$tst" }, 
-            "e-sold-kwh" : { $sum: "$e-sold-kwh" }, 
-            "e-sold-target-ccy" : { $sum: "$e-sold-target-ccy" }, 
+            'tsf' : { $first: '$ts' }, 
+            'tst' : { $first: '$tst' }, 
+            'e-sold-kwh' : { $sum: '$e-sold-kwh' }, 
+            'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' }, 
         });
 
     if (JsonObjectHelper.isNotEmpty(req._q.sort)) {

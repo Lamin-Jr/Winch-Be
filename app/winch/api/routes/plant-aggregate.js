@@ -19,7 +19,8 @@ const setAppName = require('../middleware/rest/set-app-name');
 //
 // token-protected
 router.post('/map', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_map);
-router.post('/totalizers/sold/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_totalizers);
+router.post('/totalizers/gen/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_gen_totalizers);
+router.post('/totalizers/sold/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_sold_totalizers);
 router.post('/detail', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_plant);
 router.post('/meter', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterCtrl.aggregate_for_meter);
 router.post('/customer', checkAuth, setAppName, retrieveUserProfile, queryParser, CustomerCtrl.aggregate_for_customer);
