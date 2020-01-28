@@ -102,7 +102,7 @@ exports.login = (req, res, next) => {
               ['user-id']: account.correlation_id
             },
             process.env.JWT_KEY, {
-              expiresIn: 3600
+              expiresIn: 25200
             });
           new JsonResWriter(200)
             ._messages(['Auth succeeded for ' + req.body.username])
