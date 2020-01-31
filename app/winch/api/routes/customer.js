@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const CustomerCtrl = require('../controllers/customer');
-
+const CustomerDetailCtrl = require('../controllers/customer-detail');
 const checkAuth = require('../../../../api/middleware/check-auth');
 const retrieveUserProfile = require('../../../../api/middleware/retrieve-user-profile');
 const queryParser = require('../../../../api/middleware/parse-query');
@@ -17,6 +17,8 @@ const setAppName = require('../middleware/rest/set-app-name');
 //
 // token-protected
 router.get('/', checkAuth, setAppName, retrieveUserProfile, queryParser, CustomerCtrl.read_by_query);
+
+router.get('/detail', checkAuth, setAppName, retrieveUserProfile, queryParser, CustomerDetailCtrl.aggregate_customer_meter);
 
 // router.get('/autocomplete', checkAuth, setAppName, retrieveUserProfile, queryParser, CustomerCtrl.autocomplete);
 
