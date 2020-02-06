@@ -89,7 +89,7 @@ module.exports = (req, res, next) => {
     next();
 
   } catch (e) {
-    return WellKnownJsonRes.error(res, 400, ['[query parsing] error encountered at ' + phase + ' stage', e.toString()]);
+    return WellKnownJsonRes.error(res, 400, [`[query parsing] error encountered at ${phase} stage`, e.toString()]);
   }
 
 };

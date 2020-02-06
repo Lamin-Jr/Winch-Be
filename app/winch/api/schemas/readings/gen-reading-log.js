@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Double = require('@mongoosejs/double');
 
-const plantGenerationLogSchema = mongoose.Schema({
+const genReadingLogSchema = mongoose.Schema({
   _id: String,
   ts: {
     type: Date,
@@ -77,24 +77,8 @@ const plantGenerationLogSchema = mongoose.Schema({
     }
   }
 }, { 
-  collection: 'plants-generation-log',
-  timestamps: { createdAt: 'ts-c', updatedAt: 'ts-lu' }
+  collection: 'device-readings',
 });
 
-// plantGenerationLogSchema.index({
-//   'plant': 1
-// }, {
-//   name: 'plant-asc',
-//   background: true
-// });
-// plantGenerationLogSchema.index({
-//   'ts': -1
-// }, {
-//   name: 'ts-desc',
-//   background: true
-// });
 
-const model = require('../middleware/mongoose-db-conn').winchDBConn.model('PlantGenerationLog', plantGenerationLogSchema);
-
-
-module.exports = model;
+module.exports = genReadingLogSchema;

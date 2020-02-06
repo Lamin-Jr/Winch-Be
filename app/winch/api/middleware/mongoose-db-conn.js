@@ -70,7 +70,7 @@ class DriverDBConnRegistry {
 
     let dbName = dbConnItem.baseDBName;
     if (site) {
-      dbName.concat('-', site)
+      dbName = dbName.concat('_', site)
     }
 
     let connection;

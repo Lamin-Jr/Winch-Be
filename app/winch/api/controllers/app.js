@@ -29,7 +29,7 @@ exports.accept_signup = (req, res, next) => {
             missingParams.add('role');
         }
         if (missingParams.size !== 0) {
-            WellKnownJsonRes.error(res, 400, `missing required params: \'${[...missingParams].join('\', \'')}\'`);
+            WellKnownJsonRes.error(res, 400, [`missing required params: \'${[...missingParams].join('\', \'')}\'`]);
             return;
         }
     }

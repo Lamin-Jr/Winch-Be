@@ -30,7 +30,7 @@ exports.autocomplete = (req, res, next) => {
 // Crud
 exports.create = (req, res, next) => {
   if (!req.body._id) {
-    WellKnownJsonRes.error(res, 400, 'missing \'_id\' param');
+    WellKnownJsonRes.error(res, 400, ['missing \'_id\' param']);
     return;
   }
   

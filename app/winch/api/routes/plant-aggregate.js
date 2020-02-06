@@ -4,6 +4,8 @@ const router = express.Router();
 const PlantCtrl = require('../controllers/plant');
 const MeterCtrl = require('../controllers/meter');
 const CustomerCtrl = require('../controllers/customer');
+const PlantGenerationLogCtrl = require('../controllers/plant-generation-log');
+const MeterReadingLogCtrl = require('../controllers/meter-reading-log');
 
 const checkAuth = require('../../../../api/middleware/check-auth');
 const retrieveUserProfile = require('../../../../api/middleware/retrieve-user-profile');
@@ -24,6 +26,8 @@ router.post('/totalizers/sold/:period(daily|weekly|monthly|yearly)', checkAuth, 
 router.post('/detail', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_plant);
 router.post('/meter', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterCtrl.aggregate_for_meter);
 router.post('/customer', checkAuth, setAppName, retrieveUserProfile, queryParser, CustomerCtrl.aggregate_for_customer);
+router.post('/plant-generation/:period(hourly|daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantGenerationLogCtrl.aggregate);
+router.post('/meter-reading/:period(hourly|daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterReadingLogCtrl.aggregate);
 
 
 module.exports = router;

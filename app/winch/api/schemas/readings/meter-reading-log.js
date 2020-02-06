@@ -119,42 +119,11 @@ const meterReadingLogSchema = mongoose.Schema({
         min: 1,
         max: 3
       }
-    },
-    // deprecated
-    svc: {
-      type: Array,
-      items: {
-        _id: {
-          type: mongoose.Schema.Types.ObjectId
-        },
-        qty: {
-          type: Number,
-          required: true,
-          min: 1
-        }
-      },
-      default: undefined
     }
   }
 }, { 
-  collection: 'meters-reading-log',
-  timestamps: { createdAt: 'ts-creation', updatedAt: 'ts-last-update' }
+  collection: 'meter-readings'
 });
 
-// meterReadingLogSchema.index({
-//   'meter': 1
-// }, {
-//   name: 'meter-asc',
-//   background: true
-// });
-// meterReadingLogSchema.index({
-//   ts: -1
-// }, {
-//   name: 'ts-desc',
-//   background: true
-// });
 
-const model = require('../middleware/mongoose-db-conn').winchDBConn.model('MeterReadingLog', meterReadingLogSchema);
-
-
-module.exports = model;
+module.exports = meterReadingLogSchema;

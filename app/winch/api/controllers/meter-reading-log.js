@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const ExchangeRateCtrl = require('../controllers/exchange-rate');
+
 const {
   JsonObjectHelper
 } = require('../../../../api/lib/util/json-util');
@@ -18,7 +20,7 @@ const {
 
 // cRud
 // exports.read_by_query = (req, res, next) => {
-//   BasicRead.all(req, res, next, PlantGenerationLog, req._q.filter, req._q.skip, req._q.limit, req._q.proj, req._q.sort);
+//   BasicRead.all(req, res, next, MeterReadingLog, req._q.filter, req._q.skip, req._q.limit, req._q.proj, req._q.sort);
 // };
 
 // cRud/aggregate
@@ -30,9 +32,6 @@ exports.aggregate = (req, res, next) => {
     } else {
       if (!req.body.filter['driver']) {
         missingParams.add('driver');
-      }
-      if (!req.body.filter['device']) {
-        missingParams.add('device');
       }
       if (!req.body.filter['plant']) {
         missingParams.add('plant');
@@ -60,13 +59,27 @@ exports.aggregate = (req, res, next) => {
 
   readingsFilter.m = req.body.filter['plant']
 
-  readingsFilter._id = new RegExp(`^.*\\|v${req.body.filter['driver'].toUpperCase()}\\|s${req.body.filter['device']}\\|`)
+  if (req.body.filter['meter-serial']) {
+    readingsFilter._id = new RegExp(`^.*\\|v${req.body.filter['driver'].toUpperCase()}\\|s${req.body.filter['meter-serial']}\\|`)
+  } 
+  // const readingsMeterSerialsOrList = [];
+  // req.body.filter['meter-serials'].forEach((meterSerial) => {
+  //   readingsMeterSerialsOrList.push({
+  //     // '_id': new RegExp(`^.*\\|v${req.body.filter['driver'].toUpperCase()}\\|s${meterSerial}\\|`)
+  //     '_id': new RegExp(`^.*\\|s${meterSerial}\\|`)
+  //   });
+  // });
+  // if (readingsMeterSerialsOrList.length) {
+  //   Object.assign(readingsFilter, {
+  //     '$or': readingsMeterSerialsOrList
+  //   });
+  // }
 
   // select driver db key and site
   //
   const mongooseDbConn = require('../middleware/mongoose-db-conn');
   const driverDbKey = req.body.filter['driver'];
-  const schemaDriverConf = require(`../schemas/readings/gen-reading-conf`);
+  const schemaDriverConf = require(`../schemas/readings/meter-reading-conf`);
   const DriverConf = mongooseDbConn.driverDBConnRegistry
     .get(driverDbKey)
     .model(`DriverConf`, schemaDriverConf);
@@ -74,17 +87,26 @@ exports.aggregate = (req, res, next) => {
   DriverConf.find({
     'plant.id': req.body.filter['plant']
   })
-    .select({ '_id': 1 })
+    .select({ '_id': 1, 'site.ccy': 1 })
     .then(findDriverResult => {
+      return Promise.all([
+        new Promise((resolve) => {
+          resolve(findDriverResult[0]._id.split('/')[1]);
+        }),
+        ExchangeRateCtrl.exchange_rate_by_id(findDriverResult[0].site.ccy.concat('/USD'), { rate: 1 })
+      ]);
+    })
+    .then(promiseAllResult => {
       // perform actual aggregation
       //
-      const driverDbSite = findDriverResult[0]._id.split('/')[1];
-      const genReadingSchema = require(`../schemas/readings/gen-reading-log`);
-      const GenReadingOnPeriod = mongooseDbConn.driverDBConnRegistry
+      const driverDbSite = promiseAllResult[0];
+      const exchangeRate = promiseAllResult[1][0].rate;
+      const meterReadingLogSchema = require(`../../api/schemas/readings/meter-reading-log`);
+      const MeterReadingOnPeriod = mongooseDbConn.driverDBConnRegistry
         .get(driverDbKey, driverDbSite)
-        .model(`GenReading${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, genReadingSchema);
+        .model(`MeterReading${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, meterReadingLogSchema);
 
-      let aggregation = GenReadingOnPeriod.aggregate()
+      let aggregation = MeterReadingOnPeriod.aggregate()
         .match(readingsFilter)
         .addFields({
           tsg: { '$add': [ '$ts', -1000 ] }
@@ -92,7 +114,7 @@ exports.aggregate = (req, res, next) => {
       ;
 
       {
-        const groupByPeriod = buildReadingsGrouping(req.params.period, req._q.proj)
+        const groupByPeriod = buildReadingsGrouping(req.params.period, exchangeRate, req._q.proj)
         if (groupByPeriod) {
           aggregation = aggregation.group(groupByPeriod)
         }
@@ -110,10 +132,10 @@ exports.aggregate = (req, res, next) => {
         aggregation = aggregation.project(req._q.proj);
       }
 
-      BasicRead.aggregate(req, res, next, GenReadingOnPeriod, aggregation, req._q.skip, req._q.limit);
+      BasicRead.aggregate(req, res, next, MeterReadingOnPeriod, aggregation, req._q.skip, req._q.limit);
     })
     .catch(aggregateError => {
-      WellKnownJsonRes.error(res, 500, [ `error encountered on gen reading log aggregation`, aggregateError.message ]);
+      WellKnownJsonRes.error(res, 500, [ `error encountered on aggregation`, aggregateError.message ]);
       return;
     });
 };
@@ -122,16 +144,22 @@ exports.aggregate = (req, res, next) => {
 //
 // private part
 
-const buildReadingsAggregation = () => { 
+const buildReadingsAggregation = (exchangeRate) => { 
   return {
     'ts': { '$max': '$ts' },
-    'batt-t-in': { '$avg': '$b.t.in' },
-    'e-delivered': { '$sum': '$e.d' },
-    'e-self-cons': { '$sum': '$e.s' },
-    'sens-irrad': { '$avg': '$s.i' },
-    'sens-t-in': { '$avg': '$s.t.in' },
-    'sens-t-mod': { '$avg': '$s.t.mod' },
-    'sens-t-out': { '$avg': '$s.t.out' },
+    'e-sold-kwh': { '$sum': '$p.e' },
+    'e-sold-local-ccy': { '$sum': '$ac.r' },
+    'credit-local-ccy': { '$last': '$ac.c' },
+    // 'debit-local-ccy': { '$last': '$ac.d' },
+    'e-sold-target-ccy': { '$sum': { $multiply: ['$ac.r', exchangeRate] } },
+    'credit-target-ccy': { '$last': { $multiply: ['$ac.c', exchangeRate] } },
+    // 'debit-target-ccy': { '$last': { $multiply: ['$ac.d', exchangeRate] } },
+    // 'i_min': { '$min': '$i.min' },
+    // 'i_avg': { '$avg': '$i.avg' },
+    // 'i_max': { '$max': '$i.max' },
+    // 'v_min': { '$min': '$v.min' },
+    // 'v_avg': { '$avg': '$v.avg' },
+    // 'v_max': { '$max': '$v.max' },
   };
 }
 
@@ -305,13 +333,13 @@ const groupingByPeriod = {
   },
 };
 
-const buildReadingsGrouping = (period, projection) => {
+const buildReadingsGrouping = (period, exchangeRate, projection) => {
   const result = {
     ...groupingByPeriod[period]
   };
 
   const fieldsToAggregate = Object.keys(projection);
-  const aggregations = buildReadingsAggregation();
+  const aggregations = buildReadingsAggregation(exchangeRate);
   if (fieldsToAggregate.length) {
     const negativeProjection = Object.values(projection)[0] === 0;
     const fieldsToAggregate = {};
