@@ -89,6 +89,11 @@ exports.aggregate = (req, res, next) => {
   })
     .select({ '_id': 1, 'site.ccy': 1 })
     .then(findDriverResult => {
+      if (!findDriverResult.length) {
+        WellKnownJsonRes.notFound(res);
+        return;
+      }
+      
       return Promise.all([
         new Promise((resolve) => {
           resolve(findDriverResult[0]._id.split('/')[1]);

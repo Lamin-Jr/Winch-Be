@@ -76,6 +76,11 @@ exports.aggregate = (req, res, next) => {
   })
     .select({ '_id': 1 })
     .then(findDriverResult => {
+      if (!findDriverResult.length) {
+        WellKnownJsonRes.notFound(res);
+        return;
+      }
+
       // perform actual aggregation
       //
       const driverDbSite = findDriverResult[0]._id.split('/')[1];
