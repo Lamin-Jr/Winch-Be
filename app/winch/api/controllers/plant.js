@@ -602,7 +602,7 @@ exports.aggregate_for_financial = (req, res, next) => {
   };
 
   finPerformanceFilter.ts = finPerformanceFilter.ts || {};
-  finPerformanceFilter.ts['$gt'] = new Date(req.body.filter['ts-from']);
+  finPerformanceFilter.ts['$gte'] = new Date(req.body.filter['ts-from']);
   finPerformanceFilter.ts = finPerformanceFilter.ts || {};
   finPerformanceFilter.ts['$lte'] = new Date(req.body.filter['ts-to']);
 
