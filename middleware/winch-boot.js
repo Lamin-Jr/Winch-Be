@@ -5,9 +5,6 @@ const Country = require('../app/winch/api/models/country');
 const Village = require('../app/winch/api/models/village');
 const Plant = require('../app/winch/api/models/plant');
 const PlantStatus = require('../app/winch/api/models/plant-status');
-const PlantPerformaceRatio = require('../app/winch/api/models/plant-pr')
-const PlantElectricityAvailableForSale = require('../app/winch/api/models/plant-eafs')
-const PlantGenerationLog = require('../app/winch/api/models/plant-generation-log')
 
 const {
   buildFeaturesCollection,
@@ -17,6 +14,7 @@ const { buildPlantParts } = require('./winch-boot/plant-part')
 const { buildPoles } = require('./winch-boot/pole')
 const { buildExchangeRates } = require('./winch-boot/exchange-rate')
 const { buildAgents } = require('./winch-boot/agent')
+const { buildPlantParams } = require('./winch-boot/plant-param')
 
 const creator = new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID);
 const creatorRole = process.env.WCH_AUTHZ_SYSTEM_ROLE;
@@ -61,13 +59,6 @@ function buildVillage(name, lat, lng, country) {
 
 function getVillages() {
   const villages = [
-    // -> startup test
-    // buildVillage('Adido Bonou', 6.9083946, 2.4511809, 'BJ'),
-    // buildVillage('Rokonta', 8.746048341, -12.048280551, 'SL'),
-    // buildVillage('Mara', 8.663703, -12.244886, 'SL'),
-    // buildVillage('Mabang', 8.3488265, -12.8547926, 'SL'),
-    // buildVillage('Nimjat', 17.5369021, -15.9829403, 'MR'),
-    // buildVillage('Bunjako Island', 0.0027993, 32.1256682, 'UG'),
     // -> Angola
     // - corrected: buildVillage('School Luena', -11.715636, 19.910525, 'AO'),
     buildVillage('Luena', -11.715636, 19.910525, 'AO'),
@@ -197,13 +188,6 @@ function buildPlant(name, prjDesc, prjCode, prjId, lat, lng, villageId, cDate, b
 
 function getPlantBuilders() {
   return {
-    // -> startup test
-    // 'Adido Bonou': (villageId) => { return [ buildPlant('Adido Bonou', 6.83011, 2.528081, villageId, undefined, undefined, 31.2, 148.0, 0.0, 62) ]; },
-    // 'Rokonta': (villageId) => { return [ buildPlant('Rokonta', 8.746343, -12.04933, villageId._id, 16.38, 77.76, 0.0, 86) ]; },
-    // 'Mara': (villageId) => { return [ buildPlant('Mara', 8.663117, -12.24571, villageId, undefined, undefined, 26.46, 155.52, 0.0, 107) ]; },
-    // 'Mabang': (villageId) => { return [ buildPlant('Mabang', 8.5675917, -12.173, villageId, undefined, undefined, 16.38, 77.76, 0.0, 42) ]; },
-    // 'Nimjat': (villageId) => { return [ buildPlant('Nimjat', 17.40674, -15.69189, villageId, undefined, undefined, 47.0,  118.0, 0.0, 100) ]; },
-    // 'Bunjako Island': (villageId) => { return [ buildPlant('Bunjako Island', -0.067826, 32.1864, villageId, undefined, undefined, 3.84,  18.77, 7.0, 0) ]; },
     // -> Angola
     'Luena': (villageId) => { return [ buildPlant('School Luena', 'Angola Total CSR', 'ANG_2019_006', 'ANG', -11.715636, 19.910525, villageId, undefined, undefined, 72.00, 296.00, 80.50, 0) ]; },
     'Luanda': (villageId) => { return [ buildPlant('School Mulemba - Luanda', 'Angola Total CSR', 'ANG_2019_006', 'ANG', -8.880833, 13.319167, villageId, undefined, undefined, 36.00, 296.00, 0.00, 0) ]; },
@@ -304,183 +288,6 @@ function getPlantStatusByPlantName() {
     'Nimjat RPU002': regular,
     'Koglo Kope': techWarn,
   }
-}
-
-
-function getElectricityAvailableForSaleList() {
-  return [{
-    plantNames: ['Adido'],
-    data: {
-      'degradation-factors': [{
-        from: 1,
-        value: [ 0.0075 ]
-      }],
-      'ramp-up-factors': [
-        0.00,
-        0.00,
-        0.14,
-        0.17,
-        0.20,
-        0.25,
-        0.33,
-        0.50   
-      ],
-      eafs: [
-        74.73,
-        70.46,
-        74.73,
-        74.73,
-        76.86,
-        64.05,
-        61.92,
-        59.78,
-        68.32,
-        76.86,
-        81.13,
-        81.13
-      ]
-    }
-  }]
-}
-
-function createPlantElectricityAvailableForSaleEntry(plantIds, data) {
-  return new Promise((resolve, reject) => {
-    PlantElectricityAvailableForSale.create({
-      _id: new mongoose.Types.ObjectId(),
-      plants: plantIds,
-      ...data
-    })
-    .then(createResult => {
-      console.log(`plant EAFS creation for '[${plantIds}]' succeeded with id: ${createResult._id}`);
-      resolve();
-    })
-    .catch(createError => {
-      if (createError.name === 'MongoError' && createError.code === 11000) {
-        console.log(`'[${plantIds}]' plant EAFS creation already done`);
-        resolve();
-      } else {
-        console.error(`'[${plantIds}]' plant EAFS creation error: ${createError}`);
-        reject(createError);
-      }
-    });
-  });
-}
-
-function createPlantElectricityAvailableForSaleByPlantNames(electricityAvailableForSale, resolveOnErrors = true) {  
-  return new Promise((resolve, reject) => {
-    const plantNames = electricityAvailableForSale.plantNames;
-
-    Plant.find({ 'name': { '$in': plantNames } })
-    .select({ name: 1 })
-    .exec()
-    .then(findResult => {
-      console.log(`starting plant EAFS creation for '[${plantNames}]'...`);
-
-      const plantIds = [];
-      const invalidPlantNames = [...plantNames];
-      findResult.forEach((plant) => {
-        plantIds.push(plant._id);
-        invalidPlantNames.splice(invalidPlantNames.findIndex(v => v === plant.name), 1);
-      })
-
-      if (invalidPlantNames.length > 0) {
-        const onlyOne = invalidPlantNames.length == 1;
-        console.error(`plant${onlyOne ? '' : 's' } '${invalidPlantNames}' ${onlyOne ? 'does' : 'do'} not exist, it will not have EAFS table`);
-      }
-
-      createPlantElectricityAvailableForSaleEntry(plantIds, electricityAvailableForSale.data)
-      .then(() => resolve())
-      .catch(createError => {
-        resolveOnErrors
-        ? resolve()
-        : reject(createError);
-      });
-    })
-    .catch(findError => {
-      console.error(`plant EAFS creation error for '[${plantNames}]' on searching for plants by name: ${findError}`);
-      resolveOnErrors
-        ? resolve()
-        : reject(findError);
-    })
-  });
-}
-
-
-function getPerformanceRatioList() {
-  return [{
-    plantNames: ['Adido'],
-    pr: [74.2, 73.8, 73.8, 74.3, 75.0, 75.8, 76.4, 76.5, 76.3, 75.7, 74.5, 74.4,]
-  }]
-}
-
-function createPlantPerfrmanceRatioEntry(pr, month, plantIds) {
-  return new Promise((resolve, reject) => {
-    PlantPerformaceRatio.create({
-      _id: new mongoose.Types.ObjectId(),
-      plants: plantIds,
-      month: month,
-      pr: pr
-    })
-    .then(createResult => {
-      console.log(`plant PR creation for '[${plantIds}]@${month}' succeeded with id: ${createResult._id}`);
-      resolve();
-    })
-    .catch(createError => {
-      if (createError.name === 'MongoError' && createError.code === 11000) {
-        console.log(`'[${plantIds}]@${month}' plant PR creation already done`);
-        resolve();
-      } else {
-        console.error(`'[${plantIds}]@${month}' plant PR creation error: ${createError}`);
-        reject(createError);
-      }
-    });
-  });
-}
-
-function createPlantPerfrmanceRatioByPlantNames(performanceRatio, resolveOnErrors = true) {  
-  return new Promise((resolve, reject) => {
-    const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-    const plantNames = performanceRatio.plantNames;
-    const prByMonth = performanceRatio.pr;
-
-    Plant.find({ 'name': { '$in': plantNames } })
-    .select({ name: 1 })
-    .exec()
-    .then(findResult => {
-      console.log(`starting plant PR creation for '[${plantNames}]'...`);
-
-      const plantIds = [];
-      const invalidPlantNames = [...plantNames];
-      findResult.forEach((plant) => {
-        plantIds.push(plant._id);
-        invalidPlantNames.splice(invalidPlantNames.findIndex(v => v === plant.name), 1);
-      })
-
-      if (invalidPlantNames.length > 0) {
-        const onlyOne = invalidPlantNames.length == 1;
-        console.error(`plant${onlyOne ? '' : 's' } '${invalidPlantNames}' ${onlyOne ? 'does' : 'do'} not exist, it will not have PR table`);
-      }
-
-      const createPromises = [];
-      months.forEach((month, index) => {
-        createPromises.push(createPlantPerfrmanceRatioEntry(prByMonth[index] || Number.NaN, month, plantIds));
-      });
-      
-      Promise.all(createPromises)
-      .then(() => resolve())
-      .catch(createError => {
-        resolveOnErrors
-        ? resolve()
-        : reject(createError);
-      });
-    })
-    .catch(findError => {
-      console.error(`plant PR creation error for '[${plantNames}]' on searching for plants by name: ${findError}`);
-      resolveOnErrorsdeleteResult
-        ? resolve()
-        : reject(findError);
-    })
-  });
 }
 
 
@@ -618,71 +425,17 @@ function buildPlantsStatus() {
   });
 }
 
-function buildPlantsElectricityAvailableForSale() {
-  return new Promise((resolve, reject) => {
-    PlantElectricityAvailableForSale.deleteMany({}).exec()
-    .then((deleteResult) => {
-      getElectricityAvailableForSaleList().forEach((electricityAvailableForSale) => {
-        createPlantElectricityAvailableForSaleByPlantNames(electricityAvailableForSale)
-        .then(() => resolve())
-        .catch(createError => reject(createError));
-      });
-    })
-    .catch(deleteError => {
-      reject(deleteError);
-    });
-  });
-}
-
-function buildPlantsPerformanceRatio() {
-  return new Promise((resolve, reject) => {
-    PlantPerformaceRatio.deleteMany({}).exec()
-    .then((deleteResult) => {
-      getPerformanceRatioList().forEach((performanceRatio) => {
-        createPlantPerfrmanceRatioByPlantNames(performanceRatio)
-        .then(() => resolve())
-        .catch(createError => reject(createError));
-      });
-    })
-    .catch(deleteError => {
-      reject(deleteError);
-    });
-  });
-}
-
-function checkPlantGenerationLog() {
-  return new Promise((resolve, reject) => {
-    let tsSamplig = new Date(Date.UTC(2019, 10, 23, 15));
-
-    PlantGenerationLog.create({
-      _id: new mongoose.Types.ObjectId(),
-      plant: new mongoose.Types.ObjectId(),
-      'ts': tsSamplig
-    })
-    .then(createResult => {
-      console.log(`plant generation log creation succeeded with id: ${createResult._id}`);
-    })
-    .then(() => PlantGenerationLog.deleteMany({}))
-    .then(() => resolve())
-    .catch(checkError => {
-      reject(checkError);
-    });
-  });
-}
-
 
 exports.boot = () => {
   buildCountries()
   .then(() => buildVillages())
   .then(() => buildPlants())
   .then(() => buildPlantsStatus())
-  .then(() => buildPlantsElectricityAvailableForSale())
-  .then(() => buildPlantsPerformanceRatio())
-  .then(() => checkPlantGenerationLog())
   .then(() => buildPlantParts())
   .then(() => buildPoles())
   .then(() => buildExchangeRates())
   .then(() => buildAgents())
+  .then(() => buildPlantParams())
   .catch(error => {
     console.error(`errors encountered during winch database population: ${error}`);
   })

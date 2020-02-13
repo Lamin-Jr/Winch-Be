@@ -65,7 +65,6 @@ const utilRoutes = require('./api/routes/util');
 app.use('/util', utilRoutes);
 // - app: winch
 const propagatePlantId = require('./app/winch/api/middleware/rest/propagate-plant-id');
-// TODO app.use('/winch/plants/:plantId/logs/generation', propagatePlantId, require('./app/winch/api/routes/plant-generation-log'));
 app.use('/winch/plants/:plantId/parts', propagatePlantId, require('./app/winch/api/routes/plant-part'));
 app.use('/winch/plants/aggregates', require('./app/winch/api/routes/plant-aggregate'));
 app.use('/winch/plants', require('./app/winch/api/routes/plant'));
@@ -76,7 +75,6 @@ app.use('/winch/tariffs', require('./app/winch/api/routes/tariff'));
 app.use('/winch/meters', require('./app/winch/api/routes/meter'));
 app.use('/winch/customers', require('./app/winch/api/routes/customer'));
 app.use('/winch/exchange-rates', require('./app/winch/api/routes/exchange-rate')); // [GP]
-app.use('/winch/reports', require('./app/winch/api/routes/report'))
 // app.use('/winch/transactions', require('./app/winch/api/routes/transaction'));
 // app.use('/winch/agents', require('./app/winch/api/routes/agents'));
 app.use('/winch/app', require('./app/winch/api/routes/app'));

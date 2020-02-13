@@ -28,6 +28,7 @@ router.post('/meter', checkAuth, setAppName, retrieveUserProfile, queryParser, M
 router.post('/customer', checkAuth, setAppName, retrieveUserProfile, queryParser, CustomerCtrl.aggregate_for_customer);
 router.post('/plant-generation/:period(hourly|daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantGenerationLogCtrl.aggregate);
 router.post('/meter-reading/:period(hourly|daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterReadingLogCtrl.aggregate);
+router.post('/financial/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_financial);
 
 
 module.exports = router;

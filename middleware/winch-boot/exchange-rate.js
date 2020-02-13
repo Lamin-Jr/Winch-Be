@@ -30,9 +30,9 @@ module.exports.buildExchangeRates = () => {
         }
       };
       ExchangeRate.findOneAndUpdate(filter, update, defaultUpdateOptions)
-        .then(upsertResult => {
-          if (upsertResult) {
-            console.log(`exchange rate update succeeded with id: ${upsertResult._id}`);
+        .then(updateResult => {
+          if (updateResult) {
+            console.log(`exchange rate update succeeded with id: ${updateResult._id}`);
           } else {
             ExchangeRate.create(exchangeRate)
               .then(createResult => {
@@ -43,10 +43,8 @@ module.exports.buildExchangeRates = () => {
               });
           }
         })
-        .catch(upsertError => {
-          console.error(
-            `'[${upsertResult._id}]' exchange rate creation error: ${upsertError}`
-          );
+        .catch(updateError => {
+          console.error(`'[${updateResult._id}]' exchange rate creation error: ${updateError}`);
         })
         .finally(() => {
           if (index === exchangeRates.length - 1) {

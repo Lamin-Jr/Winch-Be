@@ -88,9 +88,10 @@ exports.aggregate = (req, res, next) => {
     'plant.id': req.body.filter['plant']
   })
     .select({ '_id': 1, 'site.ccy': 1 })
+    .exec()
     .then(findDriverResult => {
       if (!findDriverResult.length) {
-        WellKnownJsonRes.notFound(res);
+        WellKnownJsonRes.okMulti(res);
         return;
       }
       

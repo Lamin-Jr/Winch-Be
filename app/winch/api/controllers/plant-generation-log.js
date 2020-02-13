@@ -75,15 +75,24 @@ exports.aggregate = (req, res, next) => {
     'plant.id': req.body.filter['plant']
   })
     .select({ '_id': 1 })
+    .exec()
     .then(findDriverResult => {
       if (!findDriverResult.length) {
-        WellKnownJsonRes.notFound(res);
+        WellKnownJsonRes.okMulti(res);
         return;
       }
 
+      return Promise.all([
+        new Promise((resolve) => {
+          resolve(findDriverResult[0]._id.split('/')[1]);
+        }),
+        // ExchangeRateCtrl.exchange_rate_by_id(findDriverResult[0].site.ccy.concat('/USD'), { rate: 1 })
+      ]);
+    })
+    .then(promiseAllResult => {
       // perform actual aggregation
       //
-      const driverDbSite = findDriverResult[0]._id.split('/')[1];
+      const driverDbSite = promiseAllResult[0];
       const genReadingSchema = require(`../schemas/readings/gen-reading-log`);
       const GenReadingOnPeriod = mongooseDbConn.driverDBConnRegistry
         .get(driverDbKey, driverDbSite)
@@ -100,6 +109,13 @@ exports.aggregate = (req, res, next) => {
         const groupByPeriod = buildReadingsGrouping(req.params.period, req._q.proj)
         if (groupByPeriod) {
           aggregation = aggregation.group(groupByPeriod)
+
+          // FIXME add theoretical energy
+          // if (groupByPeriod.hasOwnProperty('sens-irrad')) {
+          //   aggregation = aggregation.addFields({
+          //     // FIXME
+          //   });
+          // }
         }
       }
       aggregation = aggregation

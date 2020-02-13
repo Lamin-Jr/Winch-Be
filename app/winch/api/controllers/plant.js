@@ -572,6 +572,60 @@ exports.aggregate_for_plant = (req, res, next) => {
   BasicRead.aggregate(req, res, next, Plant, aggregation, req._q.skip, req._q.limit);
 };
 
+// cRud/aggregateForFinancial
+exports.aggregate_for_financial = (req, res, next) => {
+  {
+    const missingParams = new Set();
+    if (!req.body.filter) {
+      missingParams.add('filter');
+    } else {
+      if (!req.body.filter['driver']) {
+        missingParams.add('driver');
+      }
+      if (!req.body.filter['plant']) {
+        missingParams.add('plant');
+      }
+      if (!req.body.filter['ts-from']) {
+          missingParams.add('ts-from');
+      }
+      if (!req.body.filter['ts-to']) {
+        missingParams.add('ts-to');
+      }
+    }
+    if (missingParams.size !== 0) {
+        WellKnownJsonRes.error(res, 400, [`missing required params: \'${[...missingParams].join('\', \'')}\'`]);
+        return;
+    }
+  }
+
+  const finPerformanceFilter = {
+  };
+
+  finPerformanceFilter.ts = finPerformanceFilter.ts || {};
+  finPerformanceFilter.ts['$gt'] = new Date(req.body.filter['ts-from']);
+  finPerformanceFilter.ts = finPerformanceFilter.ts || {};
+  finPerformanceFilter.ts['$lte'] = new Date(req.body.filter['ts-to']);
+
+  finPerformanceFilter._id = new RegExp(`^${req.body.filter['plant'].replace(/\|/g, "\\|")}n\\d+\\|$`);
+
+  // select driver db key and site
+  //
+  const mongooseDbConn = require('../middleware/mongoose-db-conn');
+  const driverDbKey = req.body.filter['driver'];
+  const schemaFinancialPerformanceOnPeriod = require(`../schemas/kpi/financial-forecast-${req.params.period}`);
+  const FinancialPerformanceOnPeriod = mongooseDbConn.driverDBConnRegistry
+    .get(driverDbKey)
+    .model(`FinancialPerformance${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schemaFinancialPerformanceOnPeriod);
+
+  if (!req._q.sort.length) {
+    req._q.sort = {
+      ts: 1
+    }
+  }
+
+  BasicRead.all(req, res, next, FinancialPerformanceOnPeriod, finPerformanceFilter, req._q.skip, req._q.limit, req._q.proj, req._q.sort);
+};
+
 // Crud
 exports.create = (req, res, next) => {
   VillageCtrl.village_exists_by_id(req.body.village)
