@@ -8,6 +8,7 @@ const Plant = require('../../app/winch/api/models/plant');
 module.exports.buildAgents = () => {
   return new Promise((resolve, reject) => {
     const agentsByPlantId = getAgentsByPlantId();
+    const plantUpdates = {};
 
     Object.entries(agentsByPlantId).forEach(agentByPlantIdEntry => {
 
@@ -18,6 +19,12 @@ module.exports.buildAgents = () => {
         Agent.create(agent)
           .then(createResult => {
             console.info(`agent creation succeeded with id: ${createResult._id}`);
+            agent.plants.forEach(plantId => {
+              if (!plantUpdates[plantId]) {
+                plantUpdates[plantId] = []
+              }
+              plantUpdates[plantId].push(agent._id);
+            });
           })
           .catch(createError => {
             if (createError.name === 'MongoError' && createError.code === 11000) {
@@ -29,25 +36,23 @@ module.exports.buildAgents = () => {
           })
           .finally(() => {
             if (index === agents.length - 1) {
-              Plant.updateOne({
-                _id: agentByPlantIdEntry[0]
-              }, {
-                $set: { 'organization.agents': agents }
-              })
-                .then(plantUpdateResult => {
-                  console.info(`'${agentByPlantIdEntry[0]}' plant update (${plantUpdateResult.nModified}) succeeded`);
-                  resolve();
-
+              Object.entries(plantUpdates).forEach(plantUpdateEntry => {
+                Plant.updateOne({
+                  _id: plantUpdateEntry[0]
+                }, {
+                  $set: { 'organization.agents': plantUpdateEntry[1] }
                 })
-                .catch(plantUpdateError => {
-                  console.error(`'${agentByPlantIdEntry[0]}' plant update error: ${plantUpdateError}`);
-                  reject(plantUpdateError);
+                  .then(plantUpdateResult => {
+                    console.info(`'${plantUpdateEntry[0]}' plant update (${plantUpdateResult.nModified}) succeeded`);
+                    resolve();
+                  })
+                  .catch(plantUpdateError => {
+                    console.error(`'${plantUpdateEntry[0]}' plant update error: ${plantUpdateError}`);
+                    reject(plantUpdateError);
+                  });
                 });
-
             } 
-
           });
-    
       });
       
     });
@@ -58,21 +63,78 @@ module.exports.buildAgents = () => {
 
 function getAgentsByPlantId() {
   return {
+    // -> Benin
+    // --> |BEN|BEN_2019_005|1| -> Adido
     '|BEN|BEN_2019_005|1|': (plantId) => {
       return [
-        buildAgent('5e2f29e2b0a5102704b89d0a', 'Geraud Fadeyi', buildAgentContacts('+22967337540'), plantId)
+        buildAgent('5e2f29e2b0a5102704b89d0a', 'Geraud Fadeyi', buildAgentContacts('+22967337540'), [ plantId ])
+      ];
+    },
+    // -> Sierra Leone
+    // --> |WP1|SLL_2019_001|55| -> Sinkunia
+    '|WP1|SLL_2019_001|55|': (plantId) => {
+      return [
+        buildAgent('5e4a957104b1fc16fc509231', 'Mohamed Kamara', buildAgentContacts('+232078832122'), [ plantId ])
+      ];
+    },
+    // --> |WP1|SLL_2019_001|46| -> Fintonia
+    '|WP1|SLL_2019_001|46|': (plantId) => {
+      return [
+        buildAgent('5e4ac29704b1fc16fc509260', 'Osman Kamara', buildAgentContacts('+232030520185'), [ plantId ])
+      ];
+    },
+    // --> |WP1|SLL_2019_001|5| -> Kathantha Yimboi
+    '|WP1|SLL_2019_001|5|': (plantId) => {
+      return [
+        buildAgent('5e4ac2b104b1fc16fc509261', 'Alimamy Yata', buildAgentContacts('+232099234450'), [ plantId ])
+      ];
+    },
+    // --> |WP1|SLL_2019_001|8| -> Kagbere
+    '|WP1|SLL_2019_001|8|': (plantId) => {
+      return [
+        buildAgent('5e4ac2c104b1fc16fc509262', 'Kassim Kanu', buildAgentContacts('+232078092297'), [ plantId ])
+      ];
+    },
+    // --> |WP1|SLL_2019_001|27| -> Kamaranka
+    '|WP1|SLL_2019_001|27|': (plantId) => {
+      return [
+        buildAgent('5e4ac2e204b1fc16fc509263', 'John Alhaji Sesay', buildAgentContacts('+232099779824'), [ plantId ])
+      ];
+    },
+    // --> |WP1|SLL_2019_001|7| -> Batkanu
+    '|WP1|SLL_2019_001|7|': (plantId) => {
+      return [
+        buildAgent('5e4ac2f004b1fc16fc509264', 'Alhaji Kargbo', buildAgentContacts('+232099850687'), [ plantId ])
+      ];
+    },
+    // --> |WP1|SLL_2019_001|43| -> Mabang
+    '|WP1|SLL_2019_001|43|': (plantId) => {
+      return [
+        buildAgent('5e4ac30304b1fc16fc509265', 'Abdul B Kamara', buildAgentContacts('+232076294079'), [ plantId ])
+      ];
+    },
+    // --> |WP1|SLL_2019_001|31| -> Mara
+    '|WP1|SLL_2019_001|31|': (plantId) => {
+      return [
+        buildAgent('5e4ac32c04b1fc16fc509266', 'Abdul Karim Thullah', buildAgentContacts('+232088677973'), [ plantId ])
+      ];
+    },
+    // --> |WP1|SLL_2019_001|42| -> Rokonta
+    '|WP1|SLL_2019_001|42|': (plantId) => {
+      return [
+        buildAgent('5e4ac34604b1fc16fc509267', 'Idrissa Thullah', buildAgentContacts('+232088948004'), [ plantId ])
       ];
     },
   };
 }
 
 
-function buildAgent(idAsString, fullName, contacts, plantId) {
+function buildAgent(idAsString, fullName, contacts, plantIdList) {
   const result = {
     _id: new mongoose.Types.ObjectId(idAsString),
     fullName: fullName,
     contacts: contacts,
-    plant: plantId,
+    plants: plantIdList,
   };
 
   return result;

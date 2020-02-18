@@ -91,6 +91,13 @@ const plantSchema = mongoose.Schema({
     office: {
       fullAddress: String
     },
+    'customer-contacts': {
+      type: Array,
+      items: {
+        type: Object,
+        properties: mongooseMixins.makeContactModel()
+      }
+    },  
     representatives: {
       type: Array,
       items: {

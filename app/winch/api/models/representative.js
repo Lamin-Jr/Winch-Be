@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
 
-const agentSchema = mongoose.Schema({
+const representativeSchema = mongoose.Schema({
   _id: mongoose.Schema.Types.ObjectId,
   fullName: { 
     type: String,
@@ -23,10 +23,10 @@ const agentSchema = mongoose.Schema({
     required: true
   }
 }, { 
-  collection: 'agents'
+  collection: 'representatives'
 });
 
-agentSchema.index({
+representativeSchema.index({
   plant: 1
 }, {
   name: 'plant-asc',
@@ -34,7 +34,7 @@ agentSchema.index({
 });
 
 
-const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Agent', agentSchema);
+const model = require('../middleware/mongoose-db-conn').winchDBConn.model('Representative', representativeSchema);
 
 
 module.exports = model;

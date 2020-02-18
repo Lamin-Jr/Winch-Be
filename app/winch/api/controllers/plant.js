@@ -517,6 +517,7 @@ exports.aggregate_for_plant = (req, res, next) => {
     .project(project);
 
   delete project.village;
+  delete project.organization;
   Object.assign(project, {
     'village._id': 1,
     'village.name': 1,
@@ -532,6 +533,15 @@ exports.aggregate_for_plant = (req, res, next) => {
     'parts.part.label': 1,
     'parts.part.hw': 1,
     'parts.part.doc': 1,
+    'organization.office': 1,
+    'organization.customer-contacts': 1,
+    'organization.agents._id': 1,
+    'organization.agents.fullName': 1,
+    'organization.agents.contacts': 1,
+    'organization.om-managers': 1,
+    'organization.representatives._id': 1,
+    'organization.representatives.fullName': 1,
+    'organization.representatives.contacts': 1,
   });
 
   aggregation = aggregation
@@ -554,6 +564,18 @@ exports.aggregate_for_plant = (req, res, next) => {
       localField: '_id',
       foreignField: 'plant',
       as: 'parts'
+    })
+    .lookup({
+      from: 'agents',
+      localField: 'organization.agents',
+      foreignField: '_id',
+      as: 'organization.agents'
+    })
+    .lookup({
+      from: 'representatives',
+      localField: 'organization.representatives',
+      foreignField: '_id',
+      as: 'organization.representatives'
     })
     ;
 

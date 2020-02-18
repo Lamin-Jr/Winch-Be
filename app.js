@@ -40,7 +40,8 @@ require('./middleware/winch-boot').boot();
 // CORS handling
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', process.env.API_CORS_ORIGIN);
-  res.header('Access-Control-Allow-Headers', process.env.API_CORS_HEADERS);
+  res.header('Access-Control-Allow-Headers', process.env.API_CORS_ALLOW_HEADERS);
+  res.header('Access-Control-Expose-Headers', process.env.API_CORS_EXPOSE_HEADERS);
   if (req.method === 'OPTIONS') {
     res.header('Access-Control-Allow-Methods', process.env.API_CORS_METHODS);
     return res.status(200).json({});
