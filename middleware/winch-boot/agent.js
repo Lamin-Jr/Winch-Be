@@ -8,46 +8,50 @@ const Plant = require('../../app/winch/api/models/plant');
 module.exports.buildAgents = () => {
   return new Promise((resolve, reject) => {
     const agentsByPlantId = getAgentsByPlantId();
+    const toBeCompleted = Object.keys(agentsByPlantId).length;
     const plantUpdates = {};
+    let completed = 0;
 
     Object.entries(agentsByPlantId).forEach(agentByPlantIdEntry => {
 
-      const agents = agentByPlantIdEntry[1](agentByPlantIdEntry[0]);
+      const plantId = agentByPlantIdEntry[0]
+      const agents = agentByPlantIdEntry[1](plantId);
 
-      agents.forEach((agent, index) => {
+      agents.forEach((agent) => {
+
+        agent.plants.forEach(plantIdByAgent => {
+          if (!plantUpdates[plantIdByAgent]) {
+            plantUpdates[plantIdByAgent] = new Set()
+          }
+          plantUpdates[plantIdByAgent].add(agent._id);
+        });
 
         Agent.create(agent)
           .then(createResult => {
-            console.info(`agent creation succeeded with id: ${createResult._id}`);
-            agent.plants.forEach(plantId => {
-              if (!plantUpdates[plantId]) {
-                plantUpdates[plantId] = []
-              }
-              plantUpdates[plantId].push(agent._id);
-            });
+            console.info(`'${agent.fullName}@${plantId}' agent creation succeeded with id: ${createResult._id}`);
           })
           .catch(createError => {
             if (createError.name === 'MongoError' && createError.code === 11000) {
-              console.log(`'${agent.fullName}@${agentByPlantIdEntry[0]}' agent creation already done`);
+              console.log(`'${agent.fullName}@${plantId}' agent creation already done`);
             } else {
-              console.error(`'${agent.fullName}@${agentByPlantIdEntry[0]}' agent creation error: ${createError}`);
+              console.error(`'${agent.fullName}@${plantId}' agent creation error: ${createError}`);
               reject(createError);
             }
           })
           .finally(() => {
-            if (index === agents.length - 1) {
+            if (++completed === toBeCompleted) {
               Object.entries(plantUpdates).forEach(plantUpdateEntry => {
                 Plant.updateOne({
                   _id: plantUpdateEntry[0]
                 }, {
-                  $set: { 'organization.agents': plantUpdateEntry[1] }
+                  $set: { 'organization.agents': [...plantUpdateEntry[1]] }
                 })
                   .then(plantUpdateResult => {
-                    console.info(`'${plantUpdateEntry[0]}' plant update (${plantUpdateResult.nModified}) succeeded`);
+                    console.info(`'${plantUpdateEntry[0]}' plant agents update (${plantUpdateResult.nModified}) succeeded`);
                     resolve();
                   })
                   .catch(plantUpdateError => {
-                    console.error(`'${plantUpdateEntry[0]}' plant update error: ${plantUpdateError}`);
+                    console.error(`'${plantUpdateEntry[0]}' plant agents update error: ${plantUpdateError}`);
                     reject(plantUpdateError);
                   });
                 });
