@@ -6,6 +6,8 @@ const UtilCtrl = require('../controllers/util');
 const checkAuth = require('../middleware/check-auth');
 
 
+router.get('/now', UtilCtrl.now);
+
 router.post('/flat-json', UtilCtrl.flat_json);
 
 router.post('/encoded-json', UtilCtrl.encode_json);
