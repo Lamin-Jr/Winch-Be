@@ -102,7 +102,7 @@ exports.login = (req, res, next) => {
               ['user-id']: account.correlation_id
             },
             process.env.JWT_KEY, {
-              expiresIn: 25200
+              expiresIn: 14400 // 4h in seconds
             });
           new JsonResWriter(200)
             ._messages(['Auth succeeded for ' + req.body.username])
@@ -129,6 +129,7 @@ exports.login_info = (req, res, next) => {
 // others/login_refresh
 exports.login_refresh = (req, res, next) => {
   const id = req.userData._id;
+  const userId = jwt.decode(req.headers.authorization.split(" ")[1])['user-id']
 
   Account.findById(id).exec()
     .then(account => {
@@ -140,13 +141,12 @@ exports.login_refresh = (req, res, next) => {
       }
 
       const token = jwt.sign({
-          _id: account._id,
-          username: account.username,
-          registration_email: account.registration_email
-        },
+        _id: account._id,
+        ['user-id']: userId
+      },
         process.env.JWT_KEY, {
-          expiresIn: 3600
-        });
+        expiresIn: 7200 // 2h in seconds
+      });
 
       new JsonResWriter(200)
         ._messages(['Auth succeeded for ' + req.body.username])
