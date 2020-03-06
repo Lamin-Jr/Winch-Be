@@ -78,6 +78,7 @@ function getRepresentativesByPlantId() {
       '|WP1|SLL_2019_001|5|',
       '|WP1|SLL_2019_001|43|',
       '|WP1|SLL_2019_001|31|',
+      '|WP1|SLL_2019_001|65|',
       '|WP1|SLL_2019_001|42|',
       '|WP1|SLL_2019_001|55|',
     ]);

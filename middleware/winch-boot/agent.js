@@ -123,6 +123,12 @@ function getAgentsByPlantId() {
         buildAgent('5e4ac32c04b1fc16fc509266', 'Abdul Karim Thullah', buildAgentContacts('+232088677973'), [ plantId ])
       ];
     },
+    // --> |WP1|SLL_2019_001|65| -> Musaia
+    '|WP1|SLL_2019_001|65|': (plantId) => {
+      return [
+        buildAgent('5e626fb342a170482014ebd9', 'Abubakarr Jawara', buildAgentContacts('+232078576321'), [ plantId ])
+      ];
+    },
     // --> |WP1|SLL_2019_001|42| -> Rokonta
     '|WP1|SLL_2019_001|42|': (plantId) => {
       return [
