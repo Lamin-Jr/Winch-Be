@@ -3,9 +3,10 @@ const router = express.Router();
 
 const PlantCtrl = require('../controllers/plant');
 const MeterCtrl = require('../controllers/meter');
-const CustomerCtrl = require('../controllers/customer');
 const PlantGenerationLogCtrl = require('../controllers/plant-generation-log');
 const MeterReadingLogCtrl = require('../controllers/meter-reading-log');
+const CustomerCtrl = require('../controllers/customer');
+const AgentCtrl = require('../controllers/agent');
 
 const checkAuth = require('../../../../api/middleware/check-auth');
 const retrieveUserProfile = require('../../../../api/middleware/retrieve-user-profile');
@@ -24,11 +25,12 @@ router.post('/map', checkAuth, setAppName, retrieveUserProfile, queryParser, Pla
 router.post('/totalizers/gen/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_gen_totalizers);
 router.post('/totalizers/sold/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_sold_totalizers);
 router.post('/detail', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_plant);
-router.post('/meter', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterCtrl.aggregate_for_meter);
-router.post('/customer', checkAuth, setAppName, retrieveUserProfile, queryParser, CustomerCtrl.aggregate_for_customer);
 router.post('/plant-generation/:period(hourly|daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantGenerationLogCtrl.aggregate);
 router.post('/meter-reading/:period(hourly|daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterReadingLogCtrl.aggregate);
 router.post('/financial/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_financial);
+router.post('/meter', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterCtrl.aggregate_for_meter);
+router.post('/customer', checkAuth, setAppName, retrieveUserProfile, queryParser, CustomerCtrl.aggregate_for_customer);
+router.post('/agent', checkAuth, setAppName, retrieveUserProfile, queryParser, AgentCtrl.aggregate_for_agent);
 
 
 module.exports = router;
