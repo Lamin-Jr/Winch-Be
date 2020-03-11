@@ -42,7 +42,7 @@ exports.aggregate_for_agent = (req, res, next) => {
     if (req.body.filter.plants && req.body.filter.plants.length) {
       hasPlantFilter = true;
       Object.assign(plantsFilter, {
-        plant: { '$in': req.body.filter.plants }
+        plants: { '$in': req.body.filter.plants }
       });
     }
     if (req.body.filter.projects && req.body.filter.projects.length) {
