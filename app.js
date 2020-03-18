@@ -79,6 +79,7 @@ app.use('/winch/exchange-rates', require('./app/winch/api/routes/exchange-rate')
 // app.use('/winch/transactions', require('./app/winch/api/routes/transaction'));
 app.use('/winch/agents', require('./app/winch/api/routes/agent'));
 app.use('/winch/app', require('./app/winch/api/routes/app'));
+app.use('/demo/e-sell', require('./app/winch/api/routes/features/e-sell'));
 
 //
 // CUSTOM PART I - end

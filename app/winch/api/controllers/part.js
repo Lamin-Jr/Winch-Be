@@ -10,7 +10,7 @@ const {
   BasicRead,
   BasicWrite,
 } = require('../../../../api/middleware/crud');
-const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
+// const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
 
 
 //
