@@ -448,19 +448,21 @@ exports.aggregate_for_sold_totalizers = (req, res, next) => {
       .group(isDailyPeriod
         ? {
             _id: '$d',
-            ts : { '$first': '$ts' }, 
-            'e-sold-kwh' : { '$sum': '$e-sold-kwh' }, 
-            'e-sold-target-ccy' : { '$sum': '$e-sold-target-ccy' }, 
+            ts : { $first: '$ts' }, 
+            'e-sold-kwh' : { $sum: '$e-sold-kwh' }, 
+            'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' }, 
+            'sg-target-ccy' : { $sum: '$sg-target-ccy' }, 
         }
         : {
             _id: {
                 b: '$d',
-                e: '$dt'
+                e: '$dt',
             },
             'tsf' : { $first: '$ts' }, 
             'tst' : { $first: '$tst' }, 
             'e-sold-kwh' : { $sum: '$e-sold-kwh' }, 
             'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' }, 
+            'sg-target-ccy' : { $sum: '$sg-target-ccy' },
         });
 
     if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
