@@ -452,6 +452,8 @@ exports.aggregate_for_sold_totalizers = (req, res, next) => {
             'e-sold-kwh' : { $sum: '$e-sold-kwh' }, 
             'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' }, 
             'sg-target-ccy' : { $sum: '$sg-target-ccy' }, 
+            'total-conn' : { $sum: '$total-conn' },
+            'av-perc' : { $avg: '$av-perc' },
         }
         : {
             _id: {
@@ -463,6 +465,8 @@ exports.aggregate_for_sold_totalizers = (req, res, next) => {
             'e-sold-kwh' : { $sum: '$e-sold-kwh' }, 
             'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' }, 
             'sg-target-ccy' : { $sum: '$sg-target-ccy' },
+            'total-conn' : { $sum: '$total-conn' },
+            'av-perc' : { $avg: '$av-perc' },
         });
 
     if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
