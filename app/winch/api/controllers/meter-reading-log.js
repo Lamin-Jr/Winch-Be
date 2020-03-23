@@ -152,13 +152,13 @@ exports.aggregate = (req, res, next) => {
 
 const buildReadingsAggregation = (exchangeRate) => { 
   return {
-    'ts': { '$max': '$ts' },
-    'e-sold-kwh': { '$sum': '$p.e' },
-    'e-sold-local-ccy': { '$sum': '$ac.r' },
-    'credit-local-ccy': { '$last': '$ac.c' },
+    'ts': { $max: '$ts' },
+    'e-sold-kwh': { $sum: '$p.e' },
+    'e-sold-local-ccy': { $sum: '$ac.r' },
+    'credit-local-ccy': { $last: '$ac.c' },
     // 'debit-local-ccy': { '$last': '$ac.d' },
-    'e-sold-target-ccy': { '$sum': { $multiply: ['$ac.r', exchangeRate] } },
-    'credit-target-ccy': { '$last': { $multiply: ['$ac.c', exchangeRate] } },
+    'e-sold-target-ccy': { $sum: { $multiply: ['$ac.r', exchangeRate] } },
+    'credit-target-ccy': { $last: { $multiply: ['$ac.c', exchangeRate] } },
     // 'debit-target-ccy': { '$last': { $multiply: ['$ac.d', exchangeRate] } },
     // 'i_min': { '$min': '$i.min' },
     // 'i_avg': { '$avg': '$i.avg' },
@@ -166,6 +166,7 @@ const buildReadingsAggregation = (exchangeRate) => {
     // 'v_min': { '$min': '$v.min' },
     // 'v_avg': { '$avg': '$v.avg' },
     // 'v_max': { '$max': '$v.max' },
+    'categories': { $addToSet: '$ct' }
   };
 }
 

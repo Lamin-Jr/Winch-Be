@@ -11,6 +11,7 @@ const meterReadingLogSchema = mongoose.Schema({
     type: String,
     required: true
   },
+  ct: String,
   ts: {
     type: Date,
     required: true
