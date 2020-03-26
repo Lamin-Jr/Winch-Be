@@ -75,6 +75,7 @@ exports.aggregate_for_customer = (req, res, next) => {
   const project = {
     _id: 1,
     customerType: 1,
+    commCat: 1,
     fullName: 1,
     contacts: 1,
     stats: 1,

@@ -8,6 +8,7 @@ const customerSchema = mongoose.Schema({
   _id: String,
   ...mongooseMixins.fullCrudActors,
   customerType: String,
+  commCat: String,
   ...mongooseMixins.makePersonModel(),
   fullName: { 
     type: String,
