@@ -125,6 +125,7 @@ exports.aggregate_for_meter = (req, res, next) => {
     'plant.village.country.default-name': 1,
     'customer._id': 1,
     'customer.customerType': 1,
+    'customer.commCat': 1,
     'customer.fullName': 1,
   });
 
