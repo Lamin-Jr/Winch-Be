@@ -1,15 +1,21 @@
 const express = require('express');
 const router = express.Router();
 
-const ESellCtrl = require('../../controllers/features/e-sell');
+const CustomerAccountingCtrl = require('../../controllers/customer/accounting');
 
 const {
   WellKnownJsonRes
   // JsonResWriter,
 } = require('../../../../../api/middleware/json-response-util');
 
+const {
+  json,
+  text,
+} = require('../../../../../api/middleware/check-accept-header');
+
 const checkApiToken = (req, res, next) => {
   try {
+    // TODO use process.env.WCH_AUTHZ_CUSTOMER_ACCOUNTING) {
     if (req.body['api-token'] !== 'fec89532-76ff-4896-9e6f-6aabdd57555b'
       && req.body['apiToken'] !== 'fec89532-76ff-4896-9e6f-6aabdd57555b'
       && req.headers['x-winch-esell-api-token'] !== 'fec89532-76ff-4896-9e6f-6aabdd57555b') {
@@ -31,14 +37,12 @@ const checkApiToken = (req, res, next) => {
 // -> nothing for now
 
 //
-// token-protected
-router.get('/stats', checkApiToken, ESellCtrl.api_stats);
+// dedicated-api-token-protected
+router.get('/', checkApiToken, CustomerAccountingCtrl.user_status);
 
-router.get('/', checkApiToken, ESellCtrl.user_status);
+router.post('/credit', text, checkApiToken, CustomerAccountingCtrl.top_up_by_form);
 
-router.post('/form', checkApiToken, ESellCtrl.top_up_by_form);
-
-router.post('/json', checkApiToken, ESellCtrl.top_up_by_rest);
+router.post('/credit', json, checkApiToken, CustomerAccountingCtrl.top_up_by_rest);
 
 
 module.exports = router;

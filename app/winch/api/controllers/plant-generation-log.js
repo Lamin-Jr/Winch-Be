@@ -147,6 +147,7 @@ const buildReadingsAggregation = () => {
   return {
     'ts': { '$max': '$ts' },
     'batt-t-in': { '$avg': '$b.t.in' },
+    'e-theoretical': { '$sum': '$e.t' },
     'e-delivered': { '$sum': '$e.d' },
     'e-self-cons': { '$sum': '$e.s' },
     'sens-irrad': { '$avg': '$s.i' },
@@ -331,22 +332,22 @@ const buildReadingsGrouping = (period, projection) => {
     ...groupingByPeriod[period]
   };
 
-  const fieldsToAggregate = Object.keys(projection);
+  const fieldsNamesToAggregate = Object.keys(projection);
   const aggregations = buildReadingsAggregation();
-  if (fieldsToAggregate.length) {
+  const fieldsToAggregate = {};
+  if (fieldsNamesToAggregate.length) {
     const negativeProjection = Object.values(projection)[0] === 0;
-    const fieldsToAggregate = {};
 
     if (negativeProjection) {
       Object.assign(fieldsToAggregate, aggregations);
 
-      fieldsToAggregate.forEach(field => {
+      fieldsNamesToAggregate.forEach(field => {
         delete fieldsToAggregate[field]
       });
     } else {
       const fieldsToAdd = {};
-      fieldsToAggregate.forEach(field => {
-        fieldToAdd[field] = aggregations[field];
+      fieldsNamesToAggregate.forEach(field => {
+        fieldsToAdd[field] = aggregations[field];
       });
 
       Object.assign(fieldsToAggregate, fieldsToAdd);

@@ -347,22 +347,22 @@ const buildReadingsGrouping = (period, exchangeRate, projection) => {
     ...groupingByPeriod[period]
   };
 
-  const fieldsToAggregate = Object.keys(projection);
+  const fieldsNamesToAggregate = Object.keys(projection);
   const aggregations = buildReadingsAggregation(exchangeRate);
-  if (fieldsToAggregate.length) {
+  const fieldsToAggregate = {};
+  if (fieldsNamesToAggregate.length) {
     const negativeProjection = Object.values(projection)[0] === 0;
-    const fieldsToAggregate = {};
 
     if (negativeProjection) {
       Object.assign(fieldsToAggregate, aggregations);
 
-      fieldsToAggregate.forEach(field => {
+      fieldsNamesToAggregate.forEach(field => {
         delete fieldsToAggregate[field]
       });
     } else {
       const fieldsToAdd = {};
-      fieldsToAggregate.forEach(field => {
-        fieldToAdd[field] = aggregations[field];
+      fieldsNamesToAggregate.forEach(field => {
+        fieldsToAdd[field] = aggregations[field];
       });
 
       Object.assign(fieldsToAggregate, fieldsToAdd);
