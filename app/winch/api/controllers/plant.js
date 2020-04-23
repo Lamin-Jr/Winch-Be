@@ -450,12 +450,15 @@ exports.aggregate_for_sold_totalizers = (req, res, next) => {
       .group(isDailyPeriod
         ? {
             _id: '$d',
-            ts : { $first: '$ts' }, 
-            'e-sold-kwh' : { $sum: '$e-sold-kwh' }, 
-            'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' }, 
-            'sg-target-ccy' : { $sum: '$sg-target-ccy' }, 
+            ts : { $first: '$ts' },
+            'e-sold-kwh' : { $sum: '$e-sold-kwh' },
+            'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' },
+            'sg-target-ccy' : { $sum: '$sg-target-ccy' },
             'total-conn' : { $sum: '$total-conn' },
             'av-perc' : { $avg: '$av-perc' },
+            'tx-e-local-ccy' : { $sum: '$tx-e-local-ccy' },
+            'tx-e-target-ccy' : { $sum: '$tx-e-target-ccy' },
+            'total-tx' : { $sum: '$total-tx' },
         }
         : {
             _id: {
@@ -469,6 +472,9 @@ exports.aggregate_for_sold_totalizers = (req, res, next) => {
             'sg-target-ccy' : { $sum: '$sg-target-ccy' },
             'total-conn' : { $sum: '$total-conn' },
             'av-perc' : { $avg: '$av-perc' },
+            'tx-e-local-ccy' : { $sum: '$tx-e-local-ccy' },
+            'tx-e-target-ccy' : { $sum: '$tx-e-target-ccy' },
+            'total-tx' : { $sum: '$total-tx' },
         });
 
     if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
