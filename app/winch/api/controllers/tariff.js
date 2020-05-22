@@ -41,13 +41,13 @@ exports.create = (req, res, next) => {
         // set user fields
         name: req.body.name,
         currency: req.body.currency,
-        validity: req.body.validity, // new date
-        'conn-fee': req.body.connfee, // cost: {double}
-        base: req.body.base, // this contain flat { const: double, amount: double, unit: string}
-        volumes: req.body.volumes, // array json data volume [{form: double, to: double, factor: double }]
-        'standing-charge': req.body.standing, // cost: double, amount: double, unit: string, 'allow-overbooking': boolean, 'cycle-start': number
-        'limit': req.body.limit, // e: {daily: double} , p: {flat: { max: double}, scheduled: [{from: string, to: string, max: double}]} 
-        plant: req.body.plant
+        validity: req.body.validity,
+        'conn-fee': req.body['conn-fee'],
+        base: req.body.base,
+        volumes: req.body.volumes,
+        'standing-charge': req.body['standing-charge'],
+        limit: req.body.limit,
+        plant: req.body.plant,
       });
 
       BasicWrite.create(req, res, next, tariff);

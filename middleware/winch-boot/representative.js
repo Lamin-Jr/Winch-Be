@@ -81,10 +81,15 @@ function getRepresentativesByPlantId() {
       '|WP1|SLL_2019_001|65|',
       '|WP1|SLL_2019_001|42|',
       '|WP1|SLL_2019_001|55|',
+      '|WP1|SLL_2019_001|69|',
     ]);
 
   return {
     // -> Sierra Leone
+    // --> |WP1|SLL_2019_001|69| -> Bafodia
+    '|WP1|SLL_2019_001|69|': () => {
+      return [ wp1Representative ];
+    },
     // --> |WP1|SLL_2019_001|7| -> Batkanu
     '|WP1|SLL_2019_001|7|': () => {
       return [ wp1Representative ];

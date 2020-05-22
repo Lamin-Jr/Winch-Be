@@ -1,3 +1,5 @@
+const EventEmitter = require('events');
+
 const mongoose = require('mongoose');
 
 const mongooseUtil = require('../../../../api/middleware/mongoose-util');
@@ -14,8 +16,9 @@ const winchDBConn = mongoose.createConnection(
   mongooseUtil.defaultConnectionOptions
 );
 
-class DriverDBConnRegistry {
+class DriverDBConnRegistry extends EventEmitter {
   constructor() {
+    super();
     this._registry = {}
   }
 
@@ -54,6 +57,8 @@ class DriverDBConnRegistry {
         };
 
         console.info(`[DriverDBConnRegistry][${driverCode}] connection successfully created`);
+
+        this.emit("connection", `${driverCode}`);
       })
       .catch(error => {
         connPromiseErrorHandler(driverCode, error);

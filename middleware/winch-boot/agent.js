@@ -75,10 +75,10 @@ function getAgentsByPlantId() {
       ];
     },
     // -> Sierra Leone
-    // --> |WP1|SLL_2019_001|55| -> Sinkunia
-    '|WP1|SLL_2019_001|55|': (plantId) => {
+    // --> |WP1|SLL_2019_001|69| -> Bafodia
+    '|WP1|SLL_2019_001|69|': (plantId) => {
       return [
-        buildAgent('5e4a957104b1fc16fc509231', 'Mohamed Kamara', buildAgentContacts('+232078832122'), [ plantId ])
+        buildAgent('5ec4ed406347a52f28d6387a', 'Sieh Y. Kamara', buildAgentContacts('+232077703546'), [ plantId ])
       ];
     },
     // --> |WP1|SLL_2019_001|46| -> Fintonia
@@ -114,7 +114,7 @@ function getAgentsByPlantId() {
     // --> |WP1|SLL_2019_001|43| -> Mabang
     '|WP1|SLL_2019_001|43|': (plantId) => {
       return [
-        buildAgent('5e4ac30304b1fc16fc509265', 'Abdul B Kamara', buildAgentContacts('+232076294079'), [ plantId ])
+        buildAgent('5e4ac30304b1fc16fc509265', 'Abdul B. Kamara', buildAgentContacts('+232076294079'), [ plantId ])
       ];
     },
     // --> |WP1|SLL_2019_001|31| -> Mara
@@ -133,6 +133,12 @@ function getAgentsByPlantId() {
     '|WP1|SLL_2019_001|42|': (plantId) => {
       return [
         buildAgent('5e4ac34604b1fc16fc509267', 'Idrissa Thullah', buildAgentContacts('+232088948004'), [ plantId ])
+      ];
+    },
+    // --> |WP1|SLL_2019_001|55| -> Sinkunia
+    '|WP1|SLL_2019_001|55|': (plantId) => {
+      return [
+        buildAgent('5e4a957104b1fc16fc509231', 'Mohamed Kamara', buildAgentContacts('+232078832122'), [ plantId ])
       ];
     },
   };

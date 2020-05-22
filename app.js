@@ -35,6 +35,7 @@ app.use(bodyParser.json());
 require('./middleware/db-boot').boot();
 require('./middleware/realm-boot').boot();
 require('./middleware/winch-boot').boot();
+require('./middleware/sparkmeter-client-boot').boot();
 
 //
 // CORS handling

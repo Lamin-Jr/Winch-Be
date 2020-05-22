@@ -64,7 +64,7 @@ module.exports.makeLastUpdaterCompact = (updaterId, role) => {
         '_last-updtr.role': role
     }
 }
-module.exports.makeCreatorByUserData = (userData) => {
+module.exports.makeLastUpdaterByUserData = (userData) => {
     return this.makeLastUpdater(new mongoose.Types.ObjectId(userData._id), userData.role);
 }
 

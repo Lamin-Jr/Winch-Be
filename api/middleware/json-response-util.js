@@ -196,12 +196,12 @@ class JsonResWriter {
       return;
     }
 
-    const jsonBody = {};
-
     if (this.status == 204) {
       res.status(this.status).json();
       return;
     }
+
+    const jsonBody = {};
 
     jsonBody.status = this.status;
 

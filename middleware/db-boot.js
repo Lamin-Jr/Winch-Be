@@ -59,10 +59,11 @@ driverDBConnRegistry.add('mcl', {
   'disconnected': handleConnectionDown
 });
 
+
 exports.boot = () => {
+  const dbConnKey = 'winch';
   winchDBConn
     .then(workingWinchDBConn => {
-      const dbConnKey = 'winch';
       handleConnectionUp(dbConnKey);
       workingWinchDBConn.on('error', () => handleAfterConnectionError(dbConnKey));
       workingWinchDBConn.on('connected', () => handleConnectionUp(dbConnKey));

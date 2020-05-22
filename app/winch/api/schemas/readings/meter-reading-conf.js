@@ -13,7 +13,7 @@ const meterReadingConfSchema = mongoose.Schema({
   site: {
     host: String,
     tz: String,
-    ccy: String
+    ccy: String,
   }
 }, { 
   collection: 'conf',

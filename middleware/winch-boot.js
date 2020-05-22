@@ -15,7 +15,7 @@ const { buildPoles } = require('./winch-boot/pole')
 const { buildExchangeRates } = require('./winch-boot/exchange-rate')
 const { buildAgents } = require('./winch-boot/agent')
 const { buildRepresentatives } = require('./winch-boot/representative')
-const { buildPlantParams } = require('./winch-boot/plant-param')
+const { buildPlantDrivers } = require('./winch-boot/plant-driver')
 
 const creator = new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID);
 const creatorRole = process.env.WCH_AUTHZ_SYSTEM_ROLE;
@@ -227,7 +227,7 @@ function getPlantBuilders() {
     'Caixão Grande': (villageId) => { return [ buildPlant('Orphanage Caixão Grande', 'São Tomé Total CSR', 'SAO_2019_007', 'SAO', 0.295247, 6.700283, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0) ]; },
     // -> Sierra Leone
     'Alikalia': (villageId) => { return [ buildPlant('Alikalia', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.151992, -11.388275, villageId, undefined, undefined, 103.50, 444.86, 0.00, buildOrganization(), 0, 0, 0, 394) ]; },
-    'Bafodia': (villageId) => { return [ buildPlant('Bafodia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.684119, -11.731742, villageId, new Date('2019-05-31'), undefined, 36.54, 155.52, 0.00, buildOrganization(), 0, 0, 0, 167) ]; },
+    'Bafodia': (villageId) => { return [ buildPlant('Bafodia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.684119, -11.731742, villageId, new Date('2019-05-31'), new Date('2020-05-02'), 36.54, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Kabala Road', buildCustomerContacts([ '+232075057055', '+232033570611' ]))), 167, 1, 1, 20) ]; },
     'Batkanu': (villageId) => { return [ buildPlant('Batkanu', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.073461, -12.41555, villageId, new Date('2019-05-31'), new Date('2019-11-20'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Batkanu Road', buildCustomerContacts([ '+232075057055', '+232033570611' ]))), 79, 1, 3, 20) ]; },
     'Bendugu Mongo': (villageId) => { return [ buildPlant('Bendugu Mongo', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.535237, -10.957753, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 212) ]; },
     'Bindi': (villageId) => { return [ buildPlant('Bindi', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.915203, -11.447152, villageId, undefined, undefined, 103.50, 444.86, 0.00, buildOrganization(), 0, 0, 0, 468) ]; },
@@ -299,6 +299,7 @@ function getPlantStatusByPlantName() {
 
   return {
     'Adido': regular,
+    'Bafodia': regular,
     'Batkanu': regular,
     'Fintonia': regular,
     'Kagbere': regular,
@@ -461,7 +462,7 @@ exports.boot = () => {
   .then(() => buildExchangeRates())
   .then(() => buildAgents())
   .then(() => buildRepresentatives())
-  .then(() => buildPlantParams())
+  .then(() => buildPlantDrivers())
   .catch(error => {
     console.error(`errors encountered during winch database population: ${error}`);
   })

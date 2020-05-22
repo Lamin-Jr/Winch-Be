@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const meterReadingConfSchema = mongoose.Schema({
+const genReadingConfSchema = mongoose.Schema({
   _id: String,
   db: {
     name: String
@@ -19,4 +19,4 @@ const meterReadingConfSchema = mongoose.Schema({
 });
 
 
-module.exports = meterReadingConfSchema;
+module.exports = genReadingConfSchema;
