@@ -16,7 +16,8 @@ const {
 // } = require('../../../../../api/middleware/crud');
 const mongooseMixins = require('../../../../../api/middleware/mongoose-mixins');
 
-const { JsonObjectTypes } = require('../../../../../api/lib/util/json-util');
+// const { JsonObjectTypes } = require('../../../../../api/lib/util/json-util');
+
 
 //
 // endpoint-related
@@ -82,11 +83,15 @@ exports.user_status = (req, res, next) => {
         reject(new Error('Client response error -> unavailable average consumptions'));
         return;
       }
+
       const customer = promiseAllResult[1].customers[0];
       const meter = customer.meters[0];
       
       resolve({
-        ccy: spmClient.getFromMeta({ key: promiseAllResult[0]._id.mRef }, 'ccy'),
+        meter: promiseAllResult[0].msRef,
+        locale: promiseAllResult[0].loc,
+        timeZone: promiseAllResult[0].tz,
+        currency: spmClient.getFromMeta({ key: promiseAllResult[0]._id.mRef }, 'ccy'),
         creditAmount: customer.credit_balance - customer.debt_balance,
         residualBundle: meter.is_running_plan
           ? parseFloat(meter.plan_balance)
@@ -94,13 +99,16 @@ exports.user_status = (req, res, next) => {
         energyConsumption: {
           lastReading: meter.last_energy_datetime,
           unit: 'kWh',
-          current: meter.last_energy,
+          total: meter.last_energy,
           dailyAvg: promiseAllResult[2]['e-sold-kwh-daily-avg'],
           monthlyAvg: promiseAllResult[2]['e-sold-kwh-monthly-avg'],
         }
       });
     }))
-    .then(jsonBody => WellKnownJsonRes.okSingle(res, jsonBody))
+    .then(jsonBody => {
+      WellKnownJsonRes.okSingle(res, jsonBody)
+      notifyStatus(req.query['n'], jsonBody)
+    })
     .catch(readError => {
       if (!readError.message || readError.message !== 'Unauthorized') {
         WellKnownJsonRes.error(res, 500, [ 'service failure: unable to read user status', ]);
@@ -265,7 +273,7 @@ exports.subscribe = (req, res, next) => {
     return;
   }
 
-  if (missingInputParams(['plant', 'meter', 'customer', 'pin'], req.body, res)) {
+  if (missingInputParams(['plant', 'meter', 'customer', 'pin', 'timeZone', 'locale'], req.body, res)) {
     return;
   }
 
@@ -289,6 +297,8 @@ exports.subscribe = (req, res, next) => {
         msRef: req.body.meter,
         cidRef: req.body.customer,
         pin: promiseAllResult[1],
+        tz: req.body.timeZone,
+        loc: req.body.locale,
         contacts: [],
       });
 
@@ -299,7 +309,11 @@ exports.subscribe = (req, res, next) => {
       txUser
         .save()
         .then((createResult) => {
-          WellKnownJsonRes.created(res);
+          WellKnownJsonRes.created(res, {
+            _id: createResult._id,
+          });
+
+          notifySubscription(req.body['notifications'], createResult, req.body['pin'])
         })
         .catch((createError) => {
           if (createError.name === 'MongoError' && createError.code === 11000) {
@@ -316,6 +330,96 @@ exports.subscribe = (req, res, next) => {
 
 //
 // local utils
+
+const notifySubscription = (encodedRecipients, targetResponse, pin) => {
+  if (!encodedRecipients) {
+    return;
+  }
+
+  try {
+    const Notifier = require('../../middleware/notifier')
+    
+    new Set([...encodedRecipients]).forEach(encodedRecipient => {
+      try {
+        if (encodedRecipient.length === 0) {
+          return;
+        }
+
+        const encodedRecipientParts = encodedRecipient.split(/\s*:\s*/, 2);
+
+        if (encodedRecipientParts.length !== 2) {
+          console.warn(`invalid notification recipient '${encodedRecipient}', skipped`);
+          return;
+        }
+
+        const templateContext = {
+          _id: targetResponse._id,
+          meter: targetResponse.msRef,
+          pin,
+        };
+        
+        Notifier[`send_${encodedRecipientParts[0]}`]({
+          key: new require('mongoose').Types.ObjectId().toString(),
+          content: {
+            'text/plain': require('ejs').render('Dear customer,\nyour meter <%= meter %> is now enabled to operate on our energy selling smart services.\nPlease store securely the following personal identifiers:\n- m: <%= _id.m %>\n- ms: <%= _id.ms %>\n- cid: <%= _id.cid %>\n- pin: <%= pin %>\nThey will be required for your future operations.', templateContext)
+          },
+          address: Buffer.from(encodedRecipientParts[1], 'base64').toString()
+        });
+      } catch (notifyRecipientError) {
+        console.error(`notification recipient '${encodedRecipient}' error -> ${notifyRecipientError}`);
+      }
+    });
+  } catch (notifyError) {
+    console.error(`unexpected notification error -> ${notifyError}`)    
+  }
+};
+
+const notifyStatus = (encodedRecipients, targetResponse) => {
+  if (!encodedRecipients) {
+    return;
+  }
+
+  try {
+    const Notifier = require('../../middleware/notifier')
+    const {
+      NumberFormatter,
+      DateFormatter,
+    } = require('../../../../../api/lib/util/formatter');
+    
+    new Set([...encodedRecipients.split(/\s*,\s*/)]).forEach(encodedRecipient => {
+      try {
+        if (encodedRecipient.length === 0) {
+          return;
+        }
+
+        const encodedRecipientParts = encodedRecipient.split(/\s*:\s*/, 2);
+
+        if (encodedRecipientParts.length !== 2) {
+          console.warn(`invalid notification recipient '${encodedRecipient}', skipped`);
+          return;
+        }
+
+        const templateContext = Object.assign({}, targetResponse);
+        templateContext.creditFormatted = NumberFormatter.formatNumberOrDefault(targetResponse.creditAmount, NumberFormatter.buildCurrencyFormatter(targetResponse.locale, targetResponse.currency));
+        templateContext.energyConsumption.lastReading = DateFormatter.formatDateOrDefault(new Date(targetResponse.energyConsumption.lastReading), DateFormatter.buildDateAtZoneFormatter(targetResponse.locale, targetResponse.timeZone)).slice(0, -3);
+        templateContext.energyConsumption.total = NumberFormatter.formatNumberOrDefault(targetResponse.energyConsumption.total, NumberFormatter.buildFixedDecimalFormatter(targetResponse.locale, 2));
+        
+        Notifier[`send_${encodedRecipientParts[0]}`]({
+          key: new require('mongoose').Types.ObjectId().toString(),
+          content: {
+            // FIXME 'text/plain': require('ejs').render('Dear customer,\nyour credit is <%= currency %> <%= creditAmount %>.\nConsumption trends:\n- total: <%= energyConsumption.total %> <%= energyConsumption.unit %>\n- daily: <%= energyConsumption.dailyAvg %> <%= energyConsumption.unit %>\n- monthly: <%= energyConsumption.monthlyAvg %> <%= energyConsumption.unit %>', targetResponse)
+            'text/plain': require('ejs').render('Dear customer,\nyour meter <%= meter %> credit balance is <%= creditFormatted %>, updated at <%= energyConsumption.lastReading %>.\nTotal consumption: <%= energyConsumption.total %> <%= energyConsumption.unit %>', templateContext)
+          },
+          address: Buffer.from(encodedRecipientParts[1], 'base64').toString()
+        });
+      } catch (notifyRecipientError) {
+        console.error(`notification recipient '${encodedRecipient}' error -> ${notifyRecipientError}`);
+      }
+    });
+  } catch (notifyError) {
+    console.error(`unexpected notification error -> ${notifyError}`)    
+  }
+};
 
 const xFormMethods = {
   demoMXform: (input) => input,

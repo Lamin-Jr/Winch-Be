@@ -54,9 +54,11 @@ const getAxiosInstance = (client, context) => {
       maxRedirects: 0,
       timeout: 0,
     })
-    const AxiosLogger = require('axios-logger');
-    client._instance[context.key].interceptors.request.use(AxiosLogger.requestLogger);
-    client._instance[context.key].interceptors.response.use(AxiosLogger.responseLogger);
+    if (process.env.DEV) {
+      const AxiosLogger = require('axios-logger');
+      client._instance[context.key].interceptors.request.use(AxiosLogger.requestLogger);
+      client._instance[context.key].interceptors.response.use(AxiosLogger.responseLogger);
+    }
     client._meta[context.key] = context.setup.meta || {}
   }
 
@@ -148,5 +150,6 @@ class AxiosSparkmeterClient {
     })
   }
 }
+
 
 module.exports = new AxiosSparkmeterClient(axios);

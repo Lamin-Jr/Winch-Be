@@ -57,9 +57,11 @@ const checkApiToken = (req, res, next) => {
 // public
 router.post('/subscriptions', checkAuth, setAppName, retrieveUserProfile, CustomerAccountingCtrl.subscribe);
 
+// TODO decide if useful
 // router.post('/subscriptions/channels', checkAuth, setAppName, retrieveUserProfile, CustomerAccountingCtrl.add_channel_to_subscription);
 // router.delete('/subscriptions/channels', checkAuth, setAppName, retrieveUserProfile, CustomerAccountingCtrl.remove_channel_from_subscription);
 
+// TODO decide if useful
 // router.post('/subscriptions/messages/status', checkAuth, setAppName, retrieveUserProfile, CustomerAccountingCtrl.send_subscription_status);
 
 

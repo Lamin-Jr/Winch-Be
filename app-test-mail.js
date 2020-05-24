@@ -14,7 +14,7 @@ require('dotenv').config({
 console.info(`AWS env:`);
 console.info(` - WCH_NTF_AWS_PROFILE=${process.env.WCH_NTF_AWS_PROFILE}`);
 console.info(` - WCH_NTF_AWS_REGION=${process.env.WCH_NTF_AWS_REGION}`);
-console.info(` - WCH_NTF_AWS_SNS_API_VERSION=${process.env.WCH_NTF_AWS_SNS_API_VERSION}`);
+console.info(` - WCH_NTF_AWS_SES_API_VERSION=${process.env.WCH_NTF_AWS_SES_API_VERSION}`);
 
 
 // Load the AWS SDK for Node.js
@@ -27,29 +27,44 @@ AWS.config.credentials = credentials;
 AWS.config.update({region: process.env.WCH_NTF_AWS_REGION});
 
 
-// Create SNS service object
-const awsSns = new AWS.SNS({
-  apiVersion: process.env.WCH_NTF_AWS_SNS_API_VERSION
+// Create SES service object
+const awsSes = new AWS.SES({
+  apiVersion: process.env.WCH_NTF_AWS_SES_API_VERSION
 })
 
-// setup SMS attributes
-awsSns.setSMSAttributes({
-  attributes: {
-    // 'DefaultSMSType': 'Transactional', /* highest reliability */
-    DefaultSMSType: 'Promotional' /* lowest cost */
-  }
-}).promise()
-  .then(data => {
-    console.info(`setup outcome: ${require('util').inspect(data)}`);
-  }).catch(err => {
-    console.error(err, err.stack);
-  });
-
-
-// send SMS
-awsSns.publish({
-  Message: 'Test sending from BE',
-  PhoneNumber: '+15014380798',
+// send mail
+awsSes.sendEmail({
+  Destination: { /* required */
+    // CcAddresses: [
+    //   '',
+    //   /* more items */
+    // ],
+    ToAddresses: [
+      'fabio.valenti@winchenergy.com',
+      /* more items */
+    ]
+  },
+  Message: { /* required */
+    Body: { /* required */
+      Html: {
+       Charset: "UTF-8",
+       Data: "HTML_FORMAT_BODY"
+      },
+      Text: {
+       Charset: "UTF-8",
+       Data: "TEXT_FORMAT_BODY"
+      }
+     },
+     Subject: {
+      Charset: 'UTF-8',
+      Data: 'Test sending from BE'
+     }
+    },
+  Source: 'bot@winchenergy.it', /* required */
+  ReplyToAddresses: [
+     'bot@winchenergy.it',
+    /* more items */
+  ],
 }).promise()
   .then(data => {
     console.info(`MessageID is ${data.MessageId}`);

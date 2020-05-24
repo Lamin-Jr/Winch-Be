@@ -1,5 +1,3 @@
-// FIXME const axios = require('axios')
-
 exports.boot = () => {
   const client = require('../app/winch/api/clients/spm');
   const mongooseDbConn = require('../app/winch/api/middleware/mongoose-db-conn');

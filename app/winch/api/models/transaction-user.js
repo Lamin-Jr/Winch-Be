@@ -38,6 +38,16 @@ const transactionUserSchema = mongoose.Schema({
     type: String,
     required: true,
   },
+  tz: {
+    type: String,
+    required: true,
+    default: 'UTC',
+  },
+  loc: {
+    type: String,
+    required: true,
+    default: 'it-IT'
+  },
   contacts: {
     type: Array,
     items: {
