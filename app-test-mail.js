@@ -1,10 +1,10 @@
 // get the app environment
 const env = process.env.NODE_ENV || 'dev';
-const isLocalEnv = env === 'test' || env === 'dev'
+const isLocalEnv = env === 'test' || env === 'dev' || env == 'production';
 
 // exit if not development environment
 if (!isLocalEnv) {
-  console.error(`unable to run whitin '${env}' environment`);
+  console.error(`unable to run from '${env}' environment`);
   return;
 }
 
