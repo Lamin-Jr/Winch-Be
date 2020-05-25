@@ -1,15 +1,18 @@
 // get the app environment
 const env = process.env.NODE_ENV || 'dev';
-const isLocalEnv = env === 'test' || env === 'dev' || env == 'production';
+const isEligibleEnv = env === 'test' || env === 'dev' || env == 'production';
+const isLocalEnv = env === 'test' || env === 'dev';
 
 // exit if not development environment
-if (!isLocalEnv) {
+if (!isEligibleEnv) {
   console.error(`unable to run from '${env}' environment`);
   return;
 }
 
-require('dotenv').config({
-});
+if (isLocalEnv) {
+  require('dotenv').config({
+  });
+}
 
 console.info(`AWS env:`);
 console.info(` - WCH_NTF_AWS_PROFILE=${process.env.WCH_NTF_AWS_PROFILE}`);
