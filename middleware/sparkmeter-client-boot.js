@@ -9,7 +9,7 @@ exports.boot = () => {
 
     const DriverConf = mongooseDbConn.driverDBConnRegistry
       .get(driverCode)
-      .model(`DriverConf`, schemaDriverConf);
+      .model(`ApiDelivDriverConf`, schemaDriverConf);
 
     DriverConf.find({
       $or: [ { enabled: { $eq: true } }, { _id: { $eq: 'sites/DEMO' } } ],

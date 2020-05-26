@@ -71,6 +71,7 @@ awsSes.sendEmail({
 }).promise()
   .then(data => {
     console.info(`MessageID is ${data.MessageId}`);
-  }).catch(err => {
+  })
+  .catch(err => {
     console.error(err, err.stack);
   });

@@ -39,10 +39,10 @@ exports.read_by_marker_id = (req, res, next) => {
   //
   const mongooseDbConn = require('../middleware/mongoose-db-conn');
   const driverDbKey = req.body.filter['driver'];
-  const schemaDriverConf = require(`../schemas/readings/gen-reading-conf`);
+  const schemaDriverConf = require(`../schemas/readings/meter-reading-conf`);
   const DriverConf = mongooseDbConn.driverDBConnRegistry
     .get(driverDbKey)
-    .model(`DriverConf`, schemaDriverConf);
+    .model(`DelivDriverConf`, schemaDriverConf);
 
   DriverConf.find({
     'plant.id': req.body.filter['plant']

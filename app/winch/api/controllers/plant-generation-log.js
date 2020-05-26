@@ -69,7 +69,7 @@ exports.aggregate = (req, res, next) => {
   const schemaDriverConf = require(`../schemas/readings/gen-reading-conf`);
   const DriverConf = mongooseDbConn.driverDBConnRegistry
     .get(driverDbKey)
-    .model(`DriverConf`, schemaDriverConf);
+    .model(`GenDriverConf`, schemaDriverConf);
 
   DriverConf.find({
     'plant.id': req.body.filter['plant']
@@ -90,6 +90,10 @@ exports.aggregate = (req, res, next) => {
       ]);
     })
     .then(promiseAllResult => {
+      if (!promiseAllResult) {
+        return;
+      }
+
       // perform actual aggregation
       //
       const driverDbSite = promiseAllResult[0];
