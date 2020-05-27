@@ -21,7 +21,7 @@ class Notifier extends EventEmitter {
         .then(data => {
           eventName = eventName.concat('sent')
           serviceReply = data
-          console.info(`[Notifier][sms] sending succeeded -> ${data}`)
+          console.info(`[Notifier][sms] sending succeeded -> ${require('util').inspect(data)}`)
           resolve(data);
         })
         .catch(awsSnsPublishError => {
