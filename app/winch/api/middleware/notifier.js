@@ -21,26 +21,12 @@ class Notifier extends EventEmitter {
         .then(data => {
           eventName = eventName.concat('sent')
           serviceReply = data
-          // FIXME
-          // this.emit('sms-sent', { _id: data.MessageId })
-          // if (context.key) {
-          //   this.emit(`sms-sent-${context.key}`, {
-          //     _id: data.MessageId,
-          //     context,
-          //   })
-          // }
+          console.info(`[Notifier][sms] sending succeeded -> ${data}`)
           resolve(data);
         })
         .catch(awsSnsPublishError => {
           eventName = eventName.concat('err')
-          // FIXME
-          // this.emit('sms-err', { _id: data.MessageId })
-          // if (context.key) {
-          //   this.emit(`sms-err-${context.key}`, {
-          //     _id: data.MessageId,
-          //     context,
-          //   })
-          // }
+          console.err(`[Notifier][sms] sending failed -> ${awsSnsPublishError}`)
           reject(awsSnsPublishError);
         })
         .finally(() => {

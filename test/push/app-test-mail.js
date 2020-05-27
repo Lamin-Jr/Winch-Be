@@ -23,14 +23,13 @@ console.info(` - WCH_NTF_AWS_SES_API_VERSION=${process.env.WCH_NTF_AWS_SES_API_V
 // Load the AWS SDK for Node.js
 const AWS = require('aws-sdk');
 
-const credentials = new AWS.SharedIniFileCredentials({profile: process.env.WCH_NTF_AWS_PROFILE});
-AWS.config.credentials = credentials;
+// Load AWS credentials
+AWS.config.credentials = new AWS.SharedIniFileCredentials({profile: process.env.WCH_NTF_AWS_PROFILE});
 
-// Set region
+// Set AWS region
 AWS.config.update({region: process.env.WCH_NTF_AWS_REGION});
 
-
-// Create SES service object
+// Create AWS SES service object
 const awsSes = new AWS.SES({
   apiVersion: process.env.WCH_NTF_AWS_SES_API_VERSION
 })
