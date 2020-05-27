@@ -92,7 +92,7 @@ exports.user_status = (req, res, next) => {
         locale: promiseAllResult[0].loc,
         timeZone: promiseAllResult[0].tz,
         currency: spmClient.getFromMeta({ key: promiseAllResult[0]._id.mRef }, 'ccy'),
-        creditAmount: customer.credit_balance - customer.debt_balance,
+        creditAmount: getCreditFromCustomer(customer),
         residualBundle: meter.is_running_plan
           ? parseFloat(meter.plan_balance)
           : 0.0,
@@ -177,6 +177,9 @@ exports.top_up_by_form = (req, res, next) => {
             amount: req.body['a'],
           }
         }),
+        /* for debug purposes, replace promise above
+          new Promise(resolve => resolve({ status: 'success', transaction_id: 'dummy_tx_id'})),
+        */
       ]));
     }))
     .then(promiseAllResult => new Promise((resolve, reject) => {
@@ -184,9 +187,17 @@ exports.top_up_by_form = (req, res, next) => {
         reject(new Error(`Client response error -> ${promiseAllResult[1].error}`));
         return;
       }
-      resolve(promiseAllResult[1].transaction_id);
+      resolve({
+        txId: promiseAllResult[1].transaction_id,
+        txUser: promiseAllResult[0],
+        amount: req.body['a'],
+        spmClient,
+      });
     }))
-    .then(textBody => res.status(201).set('Content-Type', 'text/plain').send(textBody))
+    .then(responseContext => {
+      res.status(201).set('Content-Type', 'text/plain').send(responseContext.txId);
+      notifyTopUp(req.body['n'], responseContext);
+    })
     .catch(readError => {
       if (!readError.message || readError.message !== 'Unauthorized') {
         res
@@ -249,6 +260,9 @@ exports.top_up_by_rest = (req, res, next) => {
             amount: req.body['a'],
           }
         }),
+        /* for debug purposes, replace promise above
+          new Promise(resolve => resolve({ status: 'success', transaction_id: 'dummy_tx_id'})),
+        */
       ]));
     }))
     .then(promiseAllResult => new Promise((resolve, reject) => {
@@ -256,9 +270,17 @@ exports.top_up_by_rest = (req, res, next) => {
         reject(new Error(`Client response error -> ${promiseAllResult[1].error}`));
         return;
       }
-      resolve({ 'tx-id': promiseAllResult[1].transaction_id });
+      resolve({
+        txId: promiseAllResult[1].transaction_id,
+        txUser: promiseAllResult[0],
+        amount: req.body['a'],
+        spmClient,
+      });
     }))
-    .then(jsonBody => WellKnownJsonRes.okSingle(res, jsonBody))
+    .then(responseContext => {
+      WellKnownJsonRes.okSingle(res, { 'tx-id': responseContext.txId });
+      notifyTopUp(req.body['n'], responseContext);
+    })
     .catch(readError => {
       if (!readError.message || readError.message !== 'Unauthorized') {
         WellKnownJsonRes.error(res, 500, [ 'service failure: unable to complete transaction', ]);
@@ -420,6 +442,80 @@ const notifyStatus = (encodedRecipients, targetResponse) => {
     console.error(`unexpected notification error -> ${notifyError}`)    
   }
 };
+
+const notifyTopUp = (encodedRecipients, responseContext) => {
+  if (!encodedRecipients) {
+    return;
+  }
+
+  try {
+    const Notifier = require('../../middleware/notifier')
+    const {
+      NumberFormatter,
+      DateFormatter,
+    } = require('../../../../../api/lib/util/formatter');
+
+    spmClient.customers({
+      key: responseContext.txUser._id.mRef,
+      config: {
+        params: {
+          meter_serial: responseContext.txUser.msRef,
+          customers_only: true,
+        }
+      },
+    })
+      .then(customerResponse => {
+
+        if (customerResponse.status !== 'success') {
+          console.error(`invalid customer for meter '${responseContext.txUser.msRef}', all notifications aborted`);
+          return;
+        }
+
+        new Set([...encodedRecipients.split(/\s*,\s*/)]).forEach(encodedRecipient => {
+          try {
+            if (encodedRecipient.length === 0) {
+              return;
+            }
+    
+            const encodedRecipientParts = encodedRecipient.split(/\s*:\s*/, 2);
+    
+            if (encodedRecipientParts.length !== 2) {
+              console.warn(`invalid notification recipient '${encodedRecipient}', skipped`);
+              return;
+            }
+    
+            const currency = responseContext.spmClient.getFromMeta({ key: responseContext.txUser._id.mRef }, 'ccy');
+            const customer = customerResponse.customers[0];
+            const templateContext = {
+              meter: responseContext.txUser.msRef,
+              topUpFormatted: NumberFormatter.formatNumberOrDefault(responseContext.amount, NumberFormatter.buildCurrencyFormatter(responseContext.txUser.loc, currency)),
+              creditFormatted: NumberFormatter.formatNumberOrDefault(parseFloat(responseContext.amount) + getCreditFromCustomer(customer), NumberFormatter.buildCurrencyFormatter(responseContext.txUser.loc, currency)),
+              lastReading: DateFormatter.formatDateOrDefault(new Date(customer.meters[0].last_energy_datetime), DateFormatter.buildDateAtZoneFormatter(responseContext.txUser.loc, responseContext.txUser.tz)).slice(0, -3),
+            };
+            Notifier[`send_${encodedRecipientParts[0]}`]({
+              key: new require('mongoose').Types.ObjectId().toString(),
+              content: {
+                'text/plain': require('ejs').render('Dear customer,\nyour meter <%= meter %> has been charged of <%= topUpFormatted %>. Your credit balance is now <%= creditFormatted %> (last credit update: <%= lastReading %>).', templateContext)
+              },
+              address: Buffer.from(encodedRecipientParts[1], 'base64').toString()
+            });
+          } catch (notifyRecipientError) {
+            console.error(`notification recipient '${encodedRecipient}' error -> ${notifyRecipientError}`);
+          }
+        });
+    
+      })
+      .catch(readCustomerError => {
+        console.error(`notification error: unable to retrieve customer data -> ${readCustomerError}`);
+      });
+  } catch (notifyError) {
+    console.error(`unexpected notification error -> ${notifyError}`);
+  }
+};
+
+const getCreditFromCustomer = (customer) => {
+  return customer.credit_balance - customer.debt_balance;
+}
 
 const xFormMethods = {
   demoMXform: (input) => input,
