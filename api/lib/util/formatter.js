@@ -27,12 +27,16 @@ class NumberFormatter extends BaseFormatter {
     return BaseFormatter.formatValueOrDefault(value, formatter, defaultIfInvalid, invalidChecker);
   }
 
+  static roundToDecimals(val, totalDecimals = 2) {
+    return +(Math.round(val + `e+${totalDecimals}`) + `e-${totalDecimals}`);
+  }
+
 }
 
 class DateFormatter extends BaseFormatter {
 
-  static buildDateAtZoneFormatter(locale, timezone) {
-    return v => v.toLocaleString(locale, { timeZone: timezone });
+  static buildDateAtZoneFormatter(locale, timeZone) {
+    return v => v.toLocaleString(locale, { timeZone });
   }
 
   static formatDateOrDefault(value = new Date(), formatter, defaultIfInvalid = '', invalidChecker = dateChecker) {

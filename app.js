@@ -36,6 +36,7 @@ require('./middleware/db-boot').boot();
 require('./middleware/realm-boot').boot();
 require('./middleware/winch-boot').boot();
 require('./middleware/sparkmeter-client-boot').boot();
+require('./middleware/handlers-registries-boot').boot();
 
 //
 // CORS handling
@@ -57,14 +58,11 @@ app.disable('x-powered-by');
 
 // here there are rest services routes
 // - basics
-const accountRoutes = require('./api/routes/account');
-app.use('/accounts', accountRoutes);
+app.use('/accounts', require('./api/routes/account'));
 // - admin
-const accountDetailRoutes = require('./api/routes/accountDetail');
-app.use('/account', accountDetailRoutes);
+app.use('/account', require('./api/routes/accountDetail'));
 // - utils
-const utilRoutes = require('./api/routes/util');
-app.use('/util', utilRoutes);
+app.use('/util', require('./api/routes/util'));
 // - app: winch
 const propagatePlantId = require('./app/winch/api/middleware/rest/propagate-plant-id');
 app.use('/winch/plants/:plantId/parts', propagatePlantId, require('./app/winch/api/routes/plant-part'));
@@ -77,7 +75,8 @@ app.use('/winch/tariffs', require('./app/winch/api/routes/tariff'));
 app.use('/winch/meters', require('./app/winch/api/routes/meter'));
 app.use('/winch/customers/accounting', require('./app/winch/api/routes/customer/accounting'));
 app.use('/winch/customers', require('./app/winch/api/routes/customer'));
-app.use('/winch/exchange-rates', require('./app/winch/api/routes/exchange-rate')); // [GP]
+app.use('/winch/exchange-rates', require('./app/winch/api/routes/exchange-rate'));
+app.use('/winch/reports', require('./app/winch/api/routes/report'));
 // app.use('/winch/transactions', require('./app/winch/api/routes/transaction'));
 app.use('/winch/agents', require('./app/winch/api/routes/agent'));
 app.use('/winch/app', require('./app/winch/api/routes/app'));
@@ -104,7 +103,7 @@ app.use((error, req, res, next) => {
   res.status(error.status || 500);
   res.json({
     status: error.status,
-    message: error.message
+    messages: [ error.message ]
   });
 });
 

@@ -147,60 +147,7 @@ aggregation = aggregation
 // cRud/aggregateForGenTotalizers
 exports.aggregate_for_gen_totalizers = (req, res, next) => {
   const isDailyPeriod = req.params.period === 'daily';
-  const readingsFilter = {
-  };
-  const getPlantIdsFilter = {
-    enabled: true
-  };
-  let plantsStatusFilter = undefined;
-  let locationsFilter = undefined;
-
-  // retrieve totalizers filter: plant ids + date range
-  //
-  if (req.body.filter) {
-    if (req.body.filter.tsFrom) {
-      readingsFilter.ts = readingsFilter.ts || {};
-      readingsFilter.ts['$gte'] = new Date(req.body.filter.tsFrom);
-    }
-    if (req.body.filter.tsTo) {
-      if (isDailyPeriod) {
-        readingsFilter.ts = readingsFilter.ts || {};
-        readingsFilter.ts['$lte'] = new Date(req.body.filter.tsTo);
-      } else {
-        readingsFilter.tst = {};
-        readingsFilter.tst['$lte'] = new Date(req.body.filter.tsTo);
-      }
-    }
-    if (req.body.filter.plants && req.body.filter.plants.length) {
-      Object.assign(getPlantIdsFilter, {
-        _id: { '$in': req.body.filter.plants }
-      })
-    }
-    if (req.body.filter.projects && req.body.filter.projects.length) {
-      Object.assign(getPlantIdsFilter, {
-        'project.id': { '$in': req.body.filter.projects }
-      })
-    }
-    if (req.body.filter['plants-status'] && req.body.filter['plants-status'].length) {
-      plantsStatusFilter = {
-        'monitor.status': { '$in': req.body.filter['plants-status'] }
-      }
-    }
-    if (req.body.filter.villages && req.body.filter.villages.length) {
-      locationsFilter = {
-        'village._id': { '$in': req.body.filter.villages.map(idAsString => new mongoose.Types.ObjectId(idAsString)) }
-      }
-    }
-    if (req.body.filter.countries && req.body.filter.countries.length) {
-      if (!locationsFilter) {
-        locationsFilter = {}
-      }
-      Object.assign(locationsFilter, {
-        'village.country': { '$in': req.body.filter.countries }
-      })
-    }
-  }
-
+  const filtersRepo = buildTotalizerFiltersRepo(req.body.filter, isDailyPeriod)
   const project = {
     project: 1,
     village: 1,
@@ -208,7 +155,7 @@ exports.aggregate_for_gen_totalizers = (req, res, next) => {
   };
   
   let aggregation = Plant.aggregate()
-    .match(getPlantIdsFilter)
+    .match(filtersRepo.getPlantIdsFilter)
     .lookup({
       from: 'plants-status',
       localField: '_id',
@@ -218,8 +165,8 @@ exports.aggregate_for_gen_totalizers = (req, res, next) => {
     .unwind('$monitor')
     .project(project);
 
-  if (plantsStatusFilter) {
-    aggregation = aggregation.match(plantsStatusFilter);
+  if (filtersRepo.plantsStatusFilter) {
+    aggregation = aggregation.match(filtersRepo.plantsStatusFilter);
   }
 
   {
@@ -239,8 +186,8 @@ exports.aggregate_for_gen_totalizers = (req, res, next) => {
     })
     .unwind('$village');
 
-  if (locationsFilter) {
-    aggregation = aggregation.match(locationsFilter);
+  if (filtersRepo.locationsFilter) {
+    aggregation = aggregation.match(filtersRepo.locationsFilter);
   }
   aggregation = aggregation.project(project);
   aggregation = aggregation.allowDiskUse(true);
@@ -260,7 +207,7 @@ exports.aggregate_for_gen_totalizers = (req, res, next) => {
     });
   
     if (readingsPlantIdsOrList.length) {
-      Object.assign(readingsFilter, {
+      Object.assign(filtersRepo.readingsFilter, {
         '$or': readingsPlantIdsOrList
       });
     }
@@ -272,7 +219,7 @@ exports.aggregate_for_gen_totalizers = (req, res, next) => {
       .get('mcl')
       .model(`GenReading${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schema);
     aggregation = GenReadingDaily.aggregate()
-      .match(readingsFilter)
+      .match(filtersRepo.readingsFilter)
       .group(isDailyPeriod
         ? {
             _id: '$d',
@@ -320,172 +267,13 @@ exports.aggregate_for_gen_totalizers = (req, res, next) => {
 
 // cRud/aggregateForSoldTotalizers
 exports.aggregate_for_sold_totalizers = (req, res, next) => {
-  const isDailyPeriod = req.params.period === 'daily';
-  const readingsFilter = {
-  };
-  const getPlantIdsFilter = {
-    enabled: true
-  };
-  let plantsStatusFilter = undefined;
-  let locationsFilter = undefined;
-
-  // retrieve totalizers filter: plant ids + date range
-  //
-  if (req.body.filter) {
-    if (req.body.filter.tsFrom) {
-      readingsFilter.ts = readingsFilter.ts || {};
-      readingsFilter.ts['$gte'] = new Date(req.body.filter.tsFrom);
-    }
-    if (req.body.filter.tsTo) {
-      if (isDailyPeriod) {
-        readingsFilter.ts = readingsFilter.ts || {};
-        readingsFilter.ts['$lte'] = new Date(req.body.filter.tsTo);
-      } else {
-        readingsFilter.tst = {};
-        readingsFilter.tst['$lte'] = new Date(req.body.filter.tsTo);
-      }
-    }
-    if (req.body.filter.plants && req.body.filter.plants.length) {
-      Object.assign(getPlantIdsFilter, {
-        _id: { '$in': req.body.filter.plants }
-      })
-    }
-    if (req.body.filter.projects && req.body.filter.projects.length) {
-      Object.assign(getPlantIdsFilter, {
-        'project.id': { '$in': req.body.filter.projects }
-      })
-    }
-    if (req.body.filter['plants-status'] && req.body.filter['plants-status'].length) {
-      plantsStatusFilter = {
-        'monitor.status': { '$in': req.body.filter['plants-status'] }
-      }
-    }
-    if (req.body.filter.villages && req.body.filter.villages.length) {
-      locationsFilter = {
-        'village._id': { '$in': req.body.filter.villages.map(idAsString => new mongoose.Types.ObjectId(idAsString)) }
-      }
-    }
-    if (req.body.filter.countries && req.body.filter.countries.length) {
-      if (!locationsFilter) {
-        locationsFilter = {}
-      }
-      Object.assign(locationsFilter, {
-        'village.country': { '$in': req.body.filter.countries }
-      })
-    }
-  }
-
-  const project = {
-    project: 1,
-    village: 1,
-    'monitor.status': 1,
-  };
-  
-  let aggregation = Plant.aggregate()
-    .match(getPlantIdsFilter)
-    .lookup({
-      from: 'plants-status',
-      localField: '_id',
-      foreignField: '_id',
-      as: 'monitor'
-    })
-    .unwind('$monitor')
-    .project(project);
-
-  if (plantsStatusFilter) {
-    aggregation = aggregation.match(plantsStatusFilter);
-  }
-
-  {
-    const projectFields = Object.getOwnPropertyNames(project);
-    for (var i = 0; i < projectFields.length; i++) {
-      delete project[projectFields[i]];
-    }
-  }
-  project._id = 1
-
-  aggregation = aggregation
-    .lookup({
-      from: 'villages',
-      localField: 'village',
-      foreignField: '_id',
-      as: 'village'
-    })
-    .unwind('$village');
-
-  if (locationsFilter) {
-    aggregation = aggregation.match(locationsFilter);
-  }
-  aggregation = aggregation.project(project);
-  aggregation = aggregation.allowDiskUse(true);
-
-  aggregation.exec()
-  .then(readResult => {
-    if (!readResult.length) {
+  exports.aggregateDelivery(req.params.period, req.body.filter, req._q)
+  .then(aggregationMeta => {
+    if (!aggregationMeta) {
       WellKnownJsonRes.okMulti(res);
       return;
-    }
-    const readingsPlantIdsOrList = [];
-    readResult.map(itemBody => itemBody._id).forEach((plantId) => {
-      const plantIdTokens = plantId.split('|');
-        readingsPlantIdsOrList.push({
-          _id: new RegExp(`^\\|${plantIdTokens[1]}\\|${plantIdTokens[2]}\\|${plantIdTokens[3]}\\|.*`)
-        });
-    });
-  
-    if (readingsPlantIdsOrList.length) {
-      Object.assign(readingsFilter, {
-        '$or': readingsPlantIdsOrList
-      });
-    }
-
-    // perform actual aggregation
-    //
-    const schema = require(`../../api/schemas/readings/meter-reading-${req.params.period}-log`);
-    const MeterReadingDaily = require('../middleware/mongoose-db-conn').driverDBConnRegistry
-      .get('spm')
-      .model(`MeterReading${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schema);
-    aggregation = MeterReadingDaily.aggregate()
-      .match(readingsFilter)
-      .group(isDailyPeriod
-        ? {
-            _id: '$d',
-            ts : { $first: '$ts' },
-            'e-sold-kwh' : { $sum: '$e-sold-kwh' },
-            'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' },
-            'sg-target-ccy' : { $sum: '$sg-target-ccy' },
-            'total-conn' : { $sum: '$total-conn' },
-            'av-perc' : { $avg: '$av-perc' },
-            'tx-e-local-ccy' : { $sum: '$tx-e-local-ccy' },
-            'tx-e-target-ccy' : { $sum: '$tx-e-target-ccy' },
-            'total-tx' : { $sum: '$total-tx' },
-        }
-        : {
-            _id: {
-                b: '$d',
-                e: '$dt',
-            },
-            'tsf' : { $first: '$ts' }, 
-            'tst' : { $first: '$tst' }, 
-            'e-sold-kwh' : { $sum: '$e-sold-kwh' }, 
-            'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' }, 
-            'sg-target-ccy' : { $sum: '$sg-target-ccy' },
-            'total-conn' : { $sum: '$total-conn' },
-            'av-perc' : { $avg: '$av-perc' },
-            'tx-e-local-ccy' : { $sum: '$tx-e-local-ccy' },
-            'tx-e-target-ccy' : { $sum: '$tx-e-target-ccy' },
-            'total-tx' : { $sum: '$total-tx' },
-        });
-
-    if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
-      aggregation = aggregation.sort(req._q.sort);
-    }  
-
-    if (JsonObjectHelper.isNotEmpty(req._q.proj)) {
-      aggregation = aggregation.project(req._q.proj);
-    }
-
-    BasicRead.aggregate(req, res, next, MeterReadingDaily, aggregation, req._q.skip, req._q.limit);
+    }    
+    BasicRead.aggregate(req, res, next, aggregationMeta.model, aggregationMeta.aggregation, req._q.skip, req._q.limit);
   })
   .catch(readError => {
     WellKnownJsonRes.errorDebug(res, readError);
@@ -737,3 +525,200 @@ exports.generate_plant_id = (target = { project: {} }) => {
       });
   });
 }
+
+exports.aggregateDelivery = (period = 'daily', filter = {}, q = { sort: { _id: 1 } }) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const isDailyPeriod = period === 'daily';
+      const filtersRepo = buildTotalizerFiltersRepo(filter, isDailyPeriod)
+    
+      const project = {
+        project: 1,
+        village: 1,
+        'monitor.status': 1,
+      };
+      
+      let aggregation = Plant.aggregate()
+        .match(filtersRepo.getPlantIdsFilter)
+        .lookup({
+          from: 'plants-status',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'monitor'
+        })
+        .unwind('$monitor')
+        .project(project);
+    
+      if (filtersRepo.plantsStatusFilter) {
+        aggregation = aggregation.match(filtersRepo.plantsStatusFilter);
+      }
+    
+      {
+        const projectFields = Object.getOwnPropertyNames(project);
+        for (var i = 0; i < projectFields.length; i++) {
+          delete project[projectFields[i]];
+        }
+      }
+      project._id = 1
+    
+      aggregation = aggregation
+        .lookup({
+          from: 'villages',
+          localField: 'village',
+          foreignField: '_id',
+          as: 'village'
+        })
+        .unwind('$village');
+    
+      if (filtersRepo.locationsFilter) {
+        aggregation = aggregation.match(filtersRepo.locationsFilter);
+      }
+      aggregation = aggregation.project(project);
+      aggregation = aggregation.allowDiskUse(true);
+    
+      aggregation.exec()
+      .then(readResult => {
+        if (!readResult.length) {
+          resolve();
+          return;
+        }
+        const readingsPlantIdsOrList = [];
+        readResult.map(itemBody => itemBody._id).forEach((plantId) => {
+          const plantIdTokens = plantId.split('|');
+            readingsPlantIdsOrList.push({
+              _id: new RegExp(`^\\|${plantIdTokens[1]}\\|${plantIdTokens[2]}\\|${plantIdTokens[3]}\\|.*`)
+            });
+        });
+      
+        if (readingsPlantIdsOrList.length) {
+          Object.assign(filtersRepo.readingsFilter, {
+            '$or': readingsPlantIdsOrList
+          });
+        }
+    
+        // perform actual aggregation
+        //
+        const schema = require(`../../api/schemas/readings/meter-reading-${period}-log`);
+        const MeterReadingPeriodModel = require('../middleware/mongoose-db-conn').driverDBConnRegistry
+          .get('spm')
+          .model(`MeterReading${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
+        aggregation = MeterReadingPeriodModel.aggregate()
+          .match(filtersRepo.readingsFilter)
+          .group(isDailyPeriod
+            ? {
+                _id: '$d',
+                ts : { $first: '$ts' },
+                'e-sold-kwh' : { $sum: '$e-sold-kwh' },
+                'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' },
+                'sg-target-ccy' : { $sum: '$sg-target-ccy' },
+                'total-conn' : { $sum: '$total-conn' },
+                'av-perc' : { $avg: '$av-perc' },
+                'tx-e-local-ccy' : { $sum: '$tx-e-local-ccy' },
+                'tx-e-target-ccy' : { $sum: '$tx-e-target-ccy' },
+                'total-tx' : { $sum: '$total-tx' },
+            }
+            : {
+                _id: {
+                    b: '$d',
+                    e: '$dt',
+                },
+                'tsf' : { $first: '$ts' }, 
+                'tst' : { $first: '$tst' }, 
+                'e-sold-kwh' : { $sum: '$e-sold-kwh' }, 
+                'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' }, 
+                'sg-target-ccy' : { $sum: '$sg-target-ccy' },
+                'total-conn' : { $sum: '$total-conn' },
+                'av-perc' : { $avg: '$av-perc' },
+                'tx-e-local-ccy' : { $sum: '$tx-e-local-ccy' },
+                'tx-e-target-ccy' : { $sum: '$tx-e-target-ccy' },
+                'total-tx' : { $sum: '$total-tx' },
+            });
+    
+        if (JsonObjectHelper.isNotEmpty(q.sort)) {
+          aggregation = aggregation.sort(q.sort);
+        }  
+    
+        if (JsonObjectHelper.isNotEmpty(q.proj)) {
+          aggregation = aggregation.project(q.proj);
+        }
+    
+        resolve({
+          model: MeterReadingPeriodModel,
+          aggregation
+        })
+      })
+      .catch(error => {
+        reject(error);
+      });        
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+
+//
+// private 
+
+const buildTotalizerFiltersRepo = (inputFilter, isDailyPeriod) => {
+  const readingsFilter = {
+  };
+  const getPlantIdsFilter = {
+    enabled: true
+  };
+  let plantsStatusFilter = undefined;
+  let locationsFilter = undefined;
+
+  // retrieve totalizers filter: plant ids + date range
+  //
+  if (inputFilter) {
+    if (inputFilter.tsFrom) {
+      readingsFilter.ts = readingsFilter.ts || {};
+      readingsFilter.ts['$gte'] = new Date(inputFilter.tsFrom);
+    }
+    if (inputFilter.tsTo) {
+      if (isDailyPeriod) {
+        readingsFilter.ts = readingsFilter.ts || {};
+        readingsFilter.ts['$lte'] = new Date(inputFilter.tsTo);
+      } else {
+        readingsFilter.tst = {};
+        readingsFilter.tst['$lte'] = new Date(inputFilter.tsTo);
+      }
+    }
+    if (inputFilter.plants && inputFilter.plants.length) {
+      Object.assign(getPlantIdsFilter, {
+        _id: { '$in': inputFilter.plants }
+      })
+    }
+    if (inputFilter.projects && inputFilter.projects.length) {
+      Object.assign(getPlantIdsFilter, {
+        'project.id': { '$in': inputFilter.projects }
+      })
+    }
+    if (inputFilter['plants-status'] && inputFilter['plants-status'].length) {
+      plantsStatusFilter = {
+        'monitor.status': { '$in': inputFilter['plants-status'] }
+      }
+    }
+    if (inputFilter.villages && inputFilter.villages.length) {
+      locationsFilter = {
+        'village._id': { '$in': inputFilter.villages.map(idAsString => new mongoose.Types.ObjectId(idAsString)) }
+      }
+    }
+    if (inputFilter.countries && inputFilter.countries.length) {
+      if (!locationsFilter) {
+        locationsFilter = {}
+      }
+      Object.assign(locationsFilter, {
+        'village.country': { '$in': inputFilter.countries }
+      })
+    }
+  }
+
+  return {
+    readingsFilter,
+    getPlantIdsFilter,
+    plantsStatusFilter,
+    locationsFilter,
+  };
+};

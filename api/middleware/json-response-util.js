@@ -42,6 +42,14 @@ class WellKnownJsonRes {
     WellKnownJsonRes._genericDebug(res, 500, debugJson);
   }
 
+  static notImplemented(res, message = undefined) {
+    // res.status(501).json({
+    //   status: 501,
+    //   messages: [ <message> ]
+    // });
+    this.error(res, 501, message ? [ message ] : message);
+  }
+
   static okSingle(res, jsonItem, status = 200, debugJson = undefined, messages = undefined) {
     // res.status(<status>).json({
     //   status: <status>,
