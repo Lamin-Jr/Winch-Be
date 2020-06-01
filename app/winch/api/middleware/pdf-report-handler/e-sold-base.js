@@ -222,6 +222,7 @@ class ESoldBaseHandler extends Handler {
         }
       ])
   
+      const currencyFormatter = NumberFormatter.buildCurrencyFormatter(context.locale, 'USD');
       smallCanvasRenderService.renderToDataURL({
         type: 'line',
         defaults: {
@@ -262,12 +263,24 @@ class ESoldBaseHandler extends Handler {
               id: 'left-y-axis',
               type: 'linear',
               display: 'auto',
+              ticks: {
+                fontFamily: 'UbuntuMono',
+                callback: function (value, index, values) {
+                  return `${NumberFormatter.formatNumberOrDefault(value, currencyFormatter)}`
+                }
+              },
             },
             {
               id: 'right-y-axis',
               type: 'linear',
               position: 'right',
               display: 'auto',
+              ticks: {
+                fontFamily: 'UbuntuMono',
+                callback: function (value, index, values) {
+                  return `${value} kWh`
+                }
+              },
               gridLines: {
                 drawOnChartArea: false,
               },
@@ -307,7 +320,7 @@ class ESoldBaseHandler extends Handler {
 
         const periodSubHeading = `Period: from ${context.filterSource.tsFrom} to ${context.filterSource.tsTo}`
 
-        const totalizersSubHeading = `Total energy revenues: ${summary.tot.eSoldTargetCcy + summary.tot.sgTargetCcy} US$\nTotal energy sold: ${summary.tot.eSold} kWh`
+        const totalizersSubHeading = `Total energy selling revenues:\n${NumberFormatter.formatNumberOrDefault(summary.tot.eSoldTargetCcy + summary.tot.sgTargetCcy, currencyFormatter)}\n\nTotal energy sold:\n${NumberFormatter.formatNumberOrDefault(summary.tot.eSold, numberFormatter)} kWh`
   
         /* const pdfReport = */pdfMake.createPdf({
           info: {
@@ -341,7 +354,12 @@ class ESoldBaseHandler extends Handler {
               }
             }
           ],
-          footer: { text: `Export date: ${DateFormatter.formatDateOrDefault(new Date(), DateFormatter.buildDateAtZoneFormatter(context.locale, context.timeZone))}`, margin: [20, 0], alignment: 'right', fontSize: 9 },
+          footer: {
+            text: `Gross figures in US$.\nExport date: ${DateFormatter.formatDateOrDefault(new Date(), DateFormatter.buildDateAtZoneFormatter(context.locale, context.timeZone))} (${context.timeZone})`,
+            margin: [20, 0],
+            alignment: 'right',
+            fontSize: 9
+          },
         })
         .getBuffer(pdfBuffer => resolve(pdfBuffer))  
       })

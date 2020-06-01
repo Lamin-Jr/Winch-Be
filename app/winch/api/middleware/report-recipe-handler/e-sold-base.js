@@ -23,15 +23,15 @@ class ESoldBaseHandler extends Handler {
       .then(readResult => new Promise(resolve => {
         const pdfReportHandlersRegistry = require('../../../../../app/winch/api/middleware/pdf-report-handlers-registry');
         resolve(pdfReportHandlersRegistry.handle('e-sold-base', {
-          locale: 'en-GB',
-          timeZone: 'UTC',
+          locale: context.i18n.locale || 'en-GB',
+          timeZone: context.i18n.timeZone || 'Europe/London',
           filterSource: context.filter,
           tableSource: readResult,
         }));
       }))
       .then(pdfReportBlob => new Promise(resolve => resolve([
         {
-          filename: 'WP1_brief_report.pdf',
+          filename: `Report_WP1brief_${context.filter['tsFrom']}_${context.filter['tsTo']}.pdf`,
           content: pdfReportBlob
         }
       ])))
