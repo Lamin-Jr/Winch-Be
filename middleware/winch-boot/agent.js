@@ -141,6 +141,12 @@ function getAgentsByPlantId() {
         buildAgent('5e4a957104b1fc16fc509231', 'Mohamed Kamara', buildAgentContacts('+232078832122'), [ plantId ])
       ];
     },
+    // --> |WP1|SLL_2019_001|87| -> Yiffin
+    '|WP1|SLL_2019_001|87|': (plantId) => {
+      return [
+        buildAgent('5ef61152f94e127d462829d7', 'Tamba K. Koroma', buildAgentContacts('+232076697825'), [ plantId ])
+      ];
+    },
   };
 }
 

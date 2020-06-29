@@ -72,19 +72,23 @@ const plantSchema = mongoose.Schema({
   stats: {
     'total-active-customers': {
       type: Number,
-      default: 0  
+      default: 0,
+    },
+    'total-connected-customers': {
+      type: Number,
+      default: 0,
     },
     'chc-count': {
       type: Number,
-      default: 0  
+      default: 0,
     },
     'school-count': {
       type: Number,
-      default: 0  
+      default: 0,
     },
     'total-waiting-customers': {
       type: Number,
-      default: 0    
+      default: 0,
     }
   },
   organization: {

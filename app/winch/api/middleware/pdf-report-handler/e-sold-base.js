@@ -160,7 +160,7 @@ class ESoldBaseHandler extends Handler {
                 fillColor: '#ffbf00',
                 fontSize
               }, {
-                text: `${summary.subtot.totalConn.min} - ${summary.subtot.totalConn.max}`,
+                text: `${summary.subtot.totalConn.min === Number.MAX_SAFE_INTEGER ? 0 : summary.subtot.totalConn.min} - ${summary.subtot.totalConn.max}`,
                 alignment: 'right',
                 bold: true,
                 fillColor: '#ffbf00',
@@ -214,7 +214,7 @@ class ESoldBaseHandler extends Handler {
           fillColor: '#ffbf00',
           fontSize
         }, {
-          text: `${summary.tot.totalConn.min} - ${summary.tot.totalConn.max}`,
+          text: `${summary.tot.totalConn.min === Number.MAX_SAFE_INTEGER ? 0 : summary.tot.totalConn.min} - ${summary.tot.totalConn.max}`,
           alignment: 'right',
           bold: true,
           fillColor: '#ffbf00',

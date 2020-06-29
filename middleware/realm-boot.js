@@ -61,7 +61,7 @@ exports.boot = () => {
     console.log(`API Token ${orangeSlApiToken} activated`)
   })
   .catch(activationError => {
-    console.error(`unable to create API Token ${orangeSlApiToken}: ${activationError}`);
+    console.error(`unable to create API Token ${orangeSlApiToken} -> ${activationError}`);
   });
 
 };

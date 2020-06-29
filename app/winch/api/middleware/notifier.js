@@ -85,7 +85,7 @@ class Notifier extends EventEmitter {
       .then(sendMailInfo => {
         eventName = eventName.concat('sent')
         serviceReply = sendMailInfo
-        console.info(`[Notifier][mail] sending succeeded -> ${require('util').inspect(sendMailInfo)}`)
+        console.info(`[Notifier][mail] sending succeeded -> ${serviceReply.messageId}`)
         resolve(sendMailInfo);
       })
       .catch(error => {

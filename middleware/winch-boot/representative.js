@@ -1,11 +1,15 @@
 const mongoose = require('mongoose');
 
+// const { defaultUpdateOptions } = require('../../api/middleware/mongoose-util');
+
 const Representative = require('../../app/winch/api/models/representative');
 
 const Plant = require('../../app/winch/api/models/plant');
 
 
 module.exports.buildRepresentatives = () => {
+  const entityName = 'representative';
+
   return new Promise((resolve, reject) => {
     const representativesByPlantId = getRepresentativesByPlantId();
     const toBeCompleted = Object.keys(representativesByPlantId).length;
@@ -28,11 +32,27 @@ module.exports.buildRepresentatives = () => {
 
         Representative.create(representative)
           .then(createResult => {
-            console.info(`'${representative.fullName}@${plantId}' representative creation succeeded with id: ${createResult._id}`);
+            console.info(`'${representative.fullName}@${plantId}' ${entityName} creation succeeded with id: ${createResult._id}`);
           })
           .catch(createError => {
             if (createError.name === 'MongoError' && createError.code === 11000) {
-              console.log(`'${representative.fullName}@${plantId}' representative creation already done`);
+              console.info(`'${representative.fullName}@${plantId}' ${entityName} creation already done`);
+              // Representative.findOneAndUpdate({
+              //   _id: representative._id
+              // }, {
+              //   $set: {
+              //     fullName: representative['fullName'],
+              //     contacts: representative['contacts'],
+              //     plants: representative['plantIdList'],
+              //   }
+              // }, defaultUpdateOptions)
+              //   .then(updateResult => {
+              //     if (updateResult) {
+              //       console.info(`'${representative.fullName}@${plantId}' ${entityName} update succeeded with id: ${updateResult._id}`);
+              //     } else {
+              //       console.warn(`'${representative.fullName}@${plantId}' ${entityName} update failed with id: ${updateResult._id}`);
+              //     }
+              //   });
             } else {
               console.error(`'${representative.fullName}@${plantId}' representative creation error: ${createError}`);
               reject(createError);
@@ -69,7 +89,7 @@ function getRepresentativesByPlantId() {
   const wp1Representative = buildRepresentative(
     '5e4a9c0c04b1fc16fc509232', 
     'Harold Serry-Kamal', 
-    buildRepresentativeContacts('+232076550112'),
+    buildRepresentativeContacts(['+232076550112', '+232088505669']),
     [
       '|WP1|SLL_2019_001|7|',
       '|WP1|SLL_2019_001|46|',
@@ -82,6 +102,7 @@ function getRepresentativesByPlantId() {
       '|WP1|SLL_2019_001|42|',
       '|WP1|SLL_2019_001|55|',
       '|WP1|SLL_2019_001|69|',
+      '|WP1|SLL_2019_001|87|',
     ]);
 
   return {
@@ -126,6 +147,10 @@ function getRepresentativesByPlantId() {
     '|WP1|SLL_2019_001|55|': () => {
       return [ wp1Representative ];
     },
+    // --> |WP1|SLL_2019_001|87| -> Yiffin
+    '|WP1|SLL_2019_001|87|': () => {
+      return [ wp1Representative ];
+    },
   };
 }
 
@@ -141,11 +166,13 @@ function buildRepresentative(idAsString, fullName, contacts, plantIdList) {
   return result;
 }
 
-function buildRepresentativeContacts(phoneNo) {
-  const result = [{
-    'type': 'PHN',
-    address: phoneNo,
-  }];
+function buildRepresentativeContacts(phoneNoList = []) {
+  const result = phoneNoList.map((phoneNo) => {
+    return {
+      'type': 'PHN',
+      address: phoneNo,
+    }
+  });
 
   return result;
 }
