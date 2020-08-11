@@ -24,6 +24,7 @@ const setAppName = require('../middleware/rest/set-app-name');
 router.post('/map', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_map);
 router.post('/totalizers/gen/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_gen_totalizers);
 router.post('/totalizers/sold/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_sold_totalizers);
+router.post('/totalizers/delivery/:period(daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_delivery_totalizers);
 router.post('/detail', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantCtrl.aggregate_for_plant);
 router.post('/plant-generation/:period(hourly|daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, PlantGenerationLogCtrl.aggregate);
 router.post('/meter-reading/:period(hourly|daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, queryParser, MeterReadingLogCtrl.aggregate);

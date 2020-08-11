@@ -280,6 +280,29 @@ exports.aggregate_for_sold_totalizers = (req, res, next) => {
   });
 };
 
+// cRud/aggregateForDeliveryTotalizers
+exports.aggregate_for_delivery_totalizers = (req, res, next) => {
+  exports.aggregateDeliveryByCustomerCategory(
+    req.params.period, 
+    req.body.filter, 
+    req.body.context, 
+    req._q)
+  .then(aggregationMeta => {
+    if (!aggregationMeta) {
+      WellKnownJsonRes.okMulti(res);
+      return;
+    }    
+    BasicRead.aggregate(req, res, next, aggregationMeta.model, aggregationMeta.aggregation, req._q.skip, req._q.limit);
+  })
+  .catch(readError => {
+    if (readError.status) {
+      WellKnownJsonRes.error(res, readError.status, [ readError.message ]);
+    } else {
+      WellKnownJsonRes.errorDebug(res, readError);
+    }
+  });
+};
+
 // cRud/aggregateForPlant
 exports.aggregate_for_plant = (req, res, next) => {
   const plantFilter = {
@@ -607,7 +630,7 @@ exports.aggregateDelivery = (period = 'daily', filter = {}, q = { sort: { _id: 1
           .group(isDailyPeriod
             ? {
                 _id: '$d',
-                ts : { $first: '$ts' },
+                'ts' : { $first: '$ts' },
                 'e-sold-kwh' : { $sum: '$e-sold-kwh' },
                 'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' },
                 'sg-target-ccy' : { $sum: '$sg-target-ccy' },
@@ -656,6 +679,124 @@ exports.aggregateDelivery = (period = 'daily', filter = {}, q = { sort: { _id: 1
   });
 };
 
+exports.aggregateDeliveryByCustomerCategory = (
+    period = 'daily',
+    filter = {},
+    context = {
+      aggregator: undefined, 
+      'exchange-rate': undefined, 
+    }, 
+    q = { sort: { _id: 1 } },
+) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const deliveryGrouping = buildDeliveryGrouping(period, context);
+      if (!deliveryGrouping) {
+        const error = new Error(`unsupported aggregator: \'${context.aggregator}\'`);
+        error.status = 400;
+        reject(error);
+        return;
+      }
+
+      const isDailyPeriod = period === 'daily';
+      const filtersRepo = buildTotalizerFiltersRepo(filter, isDailyPeriod)
+
+      let aggregation = Plant.aggregate()
+        .match(filtersRepo.getPlantIdsFilter)
+        .lookup({
+          from: 'plants-status',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'monitor'
+        })
+        .unwind('$monitor')
+      //
+      ;
+
+      if (filtersRepo.plantsStatusFilter) {
+        aggregation = aggregation.match(filtersRepo.plantsStatusFilter);
+      }
+
+      aggregation = aggregation
+        .lookup({
+          from: 'villages',
+          localField: 'village',
+          foreignField: '_id',
+          as: 'village'
+        })
+        .unwind('$village')
+      //
+      ;
+
+      aggregation = aggregation
+        .lookup({
+          from: 'plants-drivers',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'driver'
+        })
+        .unwind('$driver')
+      //
+      ;
+
+      if (filtersRepo.locationsFilter) {
+        aggregation = aggregation.match(filtersRepo.locationsFilter);
+      }
+      aggregation = aggregation.group({
+        _id: '$driver.deliv-driver',
+        plants: { $addToSet: '$_id' }
+      });
+      aggregation = aggregation.allowDiskUse(true);
+
+      aggregation.exec()
+      .then(readResult => {
+        if (!readResult.length) {
+          resolve();
+          return;
+        } else if (readResult.length !== 1) {
+          const error = new Error(`unable to query more than one driver at once:`);
+          error.status = 501;
+          reject(error)
+          return;
+        }
+
+        // perform actual aggregation
+        //
+        const schema = require(`../../api/schemas/readings/customer-${period}-log`);
+        const CustomerPeriodModel = require('../middleware/mongoose-db-conn').driverDBConnRegistry
+          .get(readResult[0]._id)
+          .model(`Customer${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
+        aggregation = CustomerPeriodModel.aggregate()
+          .match({
+            ...filtersRepo.readingsFilter,
+            '_id.m': readResult[0].plants == 1
+              ? readResult[0].plants[0]
+              : { $in: readResult[0].plants }
+          })
+          .group(deliveryGrouping);
+    
+        if (JsonObjectHelper.isNotEmpty(q.sort)) {
+          aggregation = aggregation.sort(q.sort);
+        }  
+    
+        if (JsonObjectHelper.isNotEmpty(q.proj)) {
+          aggregation = aggregation.project(q.proj);
+        }
+
+        resolve({
+          model: CustomerPeriodModel,
+          aggregation
+        });
+      })
+      .catch(error => {
+        reject(error);
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
 
 //
 // private 
@@ -677,13 +818,11 @@ const buildTotalizerFiltersRepo = (inputFilter, isDailyPeriod) => {
       readingsFilter.ts['$gte'] = new Date(inputFilter.tsFrom);
     }
     if (inputFilter.tsTo) {
-      if (isDailyPeriod) {
-        readingsFilter.ts = readingsFilter.ts || {};
-        readingsFilter.ts['$lte'] = new Date(inputFilter.tsTo);
-      } else {
-        readingsFilter.tst = {};
-        readingsFilter.tst['$lte'] = new Date(inputFilter.tsTo);
-      }
+      const toFieldName = isDailyPeriod
+          ? 'ts'
+          : 'tst';
+      readingsFilter[toFieldName] = readingsFilter[toFieldName] || {};
+      readingsFilter[toFieldName]['$lte'] = new Date(inputFilter.tsTo);
     }
     if (inputFilter.plants && inputFilter.plants.length) {
       Object.assign(getPlantIdsFilter, {
@@ -713,6 +852,11 @@ const buildTotalizerFiltersRepo = (inputFilter, isDailyPeriod) => {
         'village.country': { '$in': inputFilter.countries }
       })
     }
+    if (inputFilter.categories && inputFilter.categories.length) {
+      readingsFilter.ct = inputFilter.categories.length === 1
+        ? inputFilter.categories[0]
+        : { $in: inputFilter.categories };
+    }
   }
 
   return {
@@ -722,3 +866,159 @@ const buildTotalizerFiltersRepo = (inputFilter, isDailyPeriod) => {
     locationsFilter,
   };
 };
+
+const buildDeliveryGrouping = (period, context) => {
+  const aggregatorStrategy = deliveryGroupingStrategy[context.aggregator || 'default'];
+  try {
+    return {
+      _id: aggregatorStrategy.groupId[period](),
+      ...aggregatorStrategy.accumulators[period](context),
+    };    
+  } catch {
+    return undefined;
+  }
+};
+
+const buildDeliveryDailyGroupId = () => {
+  return '$d';
+};
+
+const buildDeliveryRangedGroupId = () => {
+  return {
+    b: '$d',
+    e: '$dt',
+  }
+};
+
+const buildDeliveryDailyAccumulators = (context) => {
+  const result = {
+    'ts': { $first: '$ts' },
+    'avc': { $sum: '$avc' },
+    'b-lccy': { $avg: '$b-lccy' },
+    'b-tccy': { $avg: '$b-tccy' },
+    'ct': { $addToSet: '$ct' },
+    'es': { $sum: '$es' }, 
+    'r-es-lccy': { $sum: '$r-es-lccy' }, 
+    'r-es-tccy': { $sum: '$r-es-tccy' }, 
+    'tx-es-c': { $sum: '$tx-es-c' }, 
+    'tx-es-lccy': { $sum: '$tx-es-lccy' }, 
+    'tx-es-tccy': { $sum: '$tx-es-tccy' }, 
+  };
+  applyCustomExchangeRate(result, context['exchange-rate'])
+  return result;
+};
+
+const buildDeliveryRangedAccumulators = (context) => {
+  const result = {
+    'tsf' : { $first: '$ts' }, 
+    'tst' : { $first: '$tst' }, 
+    'avc': { $sum: '$avc' },
+    'b-lccy': { $avg: '$b-lccy' },
+    'b-tccy': { $avg: '$b-tccy' },
+    'ct': { $addToSet: '$ct' },
+    'es': { $sum: '$es' }, 
+    'r-es-lccy': { $sum: '$r-es-lccy' }, 
+    'r-es-tccy': { $sum: '$r-es-tccy' }, 
+    'tx-es-c': { $sum: '$tx-es-c' }, 
+    'tx-es-lccy': { $sum: '$tx-es-lccy' }, 
+    'tx-es-tccy': { $sum: '$tx-es-tccy' }, 
+  };
+  applyCustomExchangeRate(result, context['exchange-rate'])
+  return result;
+};
+
+const applyCustomExchangeRate = (target, customExchangeRate) => {
+  if (!customExchangeRate) {
+    return;
+  }
+  // if a custom exchange rate is passed, let's overwrite involved accumulator
+  target['b-tccy'] = { $avg: { $multiply: [ '$b-lccy', customExchangeRate ] } };
+  target['r-es-tccy'] = { $sum: { $multiply: [ '$r-es-lccy', customExchangeRate ] } };
+  target['tx-es-tccy'] = { $sum: { $multiply: [ '$tx-es-lccy', customExchangeRate ] } };
+}
+
+const buildDeliveryRangedGroupByCategoriesId = () => {
+  return {
+    ...buildDeliveryRangedGroupId(),
+    ct: "$ct",
+  }
+}
+
+const buildDeliveryRangedAccumulatorsByCategories = (context) => {
+  const result = buildDeliveryRangedAccumulators(context);
+  delete result.ct;
+  return result;
+}
+
+const deliveryGroupingStrategy = {
+  default: {
+    groupId: {
+      daily: buildDeliveryDailyGroupId,
+      weekly: buildDeliveryRangedGroupId,
+      monthly: buildDeliveryRangedGroupId,
+      yearly: buildDeliveryRangedGroupId,
+    },
+    accumulators: {
+      daily: (context) => buildDeliveryDailyAccumulators(context),
+      weekly: (context) => buildDeliveryRangedAccumulators(context),
+      monthly: (context) => buildDeliveryRangedAccumulators(context),
+      yearly: (context) => buildDeliveryRangedAccumulators(context),
+    }
+  },
+  categories: {
+    groupId: {
+      daily: () => {
+        return {
+          d: buildDeliveryDailyGroupId(),
+          ct: "$ct",
+        };
+      },
+      weekly: buildDeliveryRangedGroupByCategoriesId,
+      monthly: buildDeliveryRangedGroupByCategoriesId,
+      yearly: buildDeliveryRangedGroupByCategoriesId,
+    },
+    accumulators: {
+      daily: (context) => {
+        const result = buildDeliveryDailyAccumulators(context);
+        delete result.ct;
+        return result;
+      },
+      weekly: (context) => buildDeliveryRangedAccumulatorsByCategories(context),
+      monthly: (context) => buildDeliveryRangedAccumulatorsByCategories(context),
+      yearly: (context) => buildDeliveryRangedAccumulatorsByCategories(context),
+    }
+  },
+};
+
+  // const result = {
+  //   ...groupingByPeriod[period]
+  // };
+
+//   const fieldsNamesToAggregate = Object.keys(projection);
+//   const aggregations = buildReadingsAggregation(exchangeRate);
+//   const fieldsToAggregate = {};
+//   if (fieldsNamesToAggregate.length) {
+//     const negativeProjection = Object.values(projection)[0] === 0;
+
+//     if (negativeProjection) {
+//       Object.assign(fieldsToAggregate, aggregations);
+
+//       fieldsNamesToAggregate.forEach(field => {
+//         delete fieldsToAggregate[field]
+//       });
+//     } else {
+//       const fieldsToAdd = {};
+//       fieldsNamesToAggregate.forEach(field => {
+//         fieldsToAdd[field] = aggregations[field];
+//       });
+
+//       Object.assign(fieldsToAggregate, fieldsToAdd);
+//     }
+//   } else {
+//     Object.assign(fieldsToAggregate, aggregations);
+//   }
+
+//   Object.assign(result, fieldsToAggregate);
+
+//   return result;
+// };

@@ -55,7 +55,7 @@ exports.boot = () => {
 
   //
   // OrangeSL API token
-  const orangeSlApiToken = 'fec89532-76ff-4896-9e6f-6aabdd57555b'
+  const orangeSlApiToken = 'fec89532-76ff-4896-9e6f-6aabdd57555c'
   S2SCtrl.activateApiToken(orangeSlApiToken)
   .then((createResult) => { 
     console.log(`API Token ${orangeSlApiToken} activated`)

@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const mongooseGeoJsonSchema = require('mongoose-geojson-schema');
 const mongooseMixins = require('../api/middleware/mongoose-mixins')
-const Country = require('../app/winch/api/models/country');
 const Village = require('../app/winch/api/models/village');
 const Plant = require('../app/winch/api/models/plant');
 const PlantStatus = require('../app/winch/api/models/plant-status');

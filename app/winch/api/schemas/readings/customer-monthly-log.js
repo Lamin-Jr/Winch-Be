@@ -1,0 +1,37 @@
+const mongoose = require('mongoose');
+const Double = require('@mongoosejs/double');
+
+const customerWeeklyLogSchema = mongoose.Schema({
+  _id: {
+    type: Object,
+    properties: {
+      'm': String, 
+      'ms': String, 
+      'yt': Number, 
+      'mt': Number, 
+      'c': String, 
+      'n': mongoose.Schema.Types.Long,
+    },
+  }, 
+  'avc': Number, 
+  'b-lccy': Double, 
+  'b-tccy': Double, 
+  'ct' : String, 
+  'd': String, 
+  'df': String, 
+  'dt': String, 
+  'es': Double, 
+  'r-es-lccy': Double, 
+  'r-es-tccy': Double, 
+  'ts': Date, 
+  'tsf': Date, 
+  'tst': Date, 
+  'tx-es-c': Number, 
+  'tx-es-lccy': Double, 
+  'tx-es-tccy': Double, 
+}, {
+  collection: 'customers-monthly'
+});
+
+
+module.exports = customerWeeklyLogSchema;
