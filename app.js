@@ -15,11 +15,15 @@ const app = express();
 const env = process.env.NODE_ENV || 'dev';
 const isLocalEnv = env === 'dev'
 
-// load dotenv on development environment
+// development environment specific operations
 if (isLocalEnv) {
+  // development environment / load dotenv
   require('dotenv').config({
 
   });
+  // // development environment / attach morgan to express
+  // const morgan = require('morgan');
+  // app.use(morgan('combined'));
 }
 
 const bodyParser = require('body-parser');
@@ -65,6 +69,18 @@ app.use('/account', require('./api/routes/accountDetail'));
 app.use('/util', require('./api/routes/util'));
 // - app: winch
 const propagatePlantId = require('./app/winch/api/middleware/rest/propagate-plant-id');
+//   - plant detail: cards, logs, counters
+app.use('/winch/v1/plants/cards', require('./app/winch/api/routes/plant/card'));
+app.use('/winch/v1/plants/logs', require('./app/winch/api/routes/plant/log'));
+app.use('/winch/v1/plants/counters', require('./app/winch/api/routes/plant/counter'));
+//   - plant aux services: log, counters
+app.use('/winch/v1/plants/services/cards', require('./app/winch/api/routes/plant/service/card'));
+app.use('/winch/v1/plants/services/logs', require('./app/winch/api/routes/plant/service/log'));
+//   - plant CRUDs: plants, villages, countries
+app.use('/winch/v1/plants', require('./app/winch/api/routes/plant'));
+app.use('/winch/v1/villages', require('./app/winch/api/routes/village'));
+app.use('/winch/v1/countries', require('./app/winch/api/routes/country'));
+// DEPRECATED
 app.use('/winch/plants/:plantId/parts', propagatePlantId, require('./app/winch/api/routes/plant-part'));
 app.use('/winch/plants/aggregates', require('./app/winch/api/routes/plant-aggregate'));
 app.use('/winch/plants', require('./app/winch/api/routes/plant'));
@@ -81,6 +97,7 @@ app.use('/winch/reports', require('./app/winch/api/routes/report'));
 app.use('/winch/agents', require('./app/winch/api/routes/agent'));
 app.use('/winch/app', require('./app/winch/api/routes/app'));
 app.use('/demo/e-sell', require('./app/winch/api/routes/features/e-sell'));
+//
 
 //
 // CUSTOM PART I - end
@@ -103,7 +120,7 @@ app.use((error, req, res, next) => {
   res.status(error.status || 500);
   res.json({
     status: error.status,
-    messages: [ error.message ]
+    messages: [error.message]
   });
 });
 
@@ -112,7 +129,7 @@ app.use((error, req, res, next) => {
 //
 
 // start server on the specified port and binding host
-app.listen(process.env.NODE_PORT, '0.0.0.0', function() {
+app.listen(process.env.NODE_PORT, '0.0.0.0', function () {
   if (isLocalEnv) {
     // print a message when the server starts listening
     console.log(`server starting on ${process.env.NODE_PORT}`);

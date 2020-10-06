@@ -3,15 +3,18 @@ const mongoose = require('mongoose');
 const Plant = require('../models/plant');
 const VillageCtrl = require('./village');
 
-const { 
-  // JsonObjectTypes,
-  JsonObjectHelper, 
-} = require('../../../../api/lib/util/json-util');
+const PlantCardCtrl = require('./plant/card');
+const PlantLogCtrl = require('./plant/log');
+
+// const { 
+//   // JsonObjectTypes,
+//   JsonObjectHelper, 
+// } = require('../../../../api/lib/util/json-util');
 const {
   WellKnownJsonRes,
   // JsonResWriter,
 } = require('../../../../api/middleware/json-response-util');
-const { 
+const {
   BasicRead,
   BasicWrite,
 } = require('../../../../api/middleware/crud');
@@ -31,452 +34,46 @@ exports.autocomplete = (req, res, next) => {
   BasicRead.autocomplete(req, res, next, Plant, 'name', req._q.filterAcSimple, req._q.filter, req._q.skip, req._q.limit, req._q.proj, req._q.sort);
 };
 
+// DEPRECATED
 // cRud/aggregateForMap
 exports.aggregate_for_map = (req, res, next) => {
-  const plantsFilter = {
-    enabled: true
-  }
-  let plantsStatusFilter = undefined;
-  let locationsFilter = undefined;
+  PlantCardCtrl.list(req, res, next)
+}
 
-  if (req.body.filter) {
-    if (req.body.filter.plants && req.body.filter.plants.length) {
-      Object.assign(plantsFilter, {
-        _id: { '$in': req.body.filter.plants }
-      })
-    }
-    if (req.body.filter.projects && req.body.filter.projects.length) {
-      Object.assign(plantsFilter, {
-        'project.id': { '$in': req.body.filter.projects }
-      })
-    }
-    if (req.body.filter['plants-status'] && req.body.filter['plants-status'].length) {
-      plantsStatusFilter = {
-        'monitor.status': { '$in': req.body.filter['plants-status'] }
-      }
-    }
-    if (req.body.filter.villages && req.body.filter.villages.length) {
-      locationsFilter = {
-        'village._id': { '$in': req.body.filter.villages.map(idAsString => new mongoose.Types.ObjectId(idAsString)) }
-      }
-    }
-    if (req.body.filter.countries && req.body.filter.countries.length) {
-      if (!locationsFilter) {
-        locationsFilter = {}
-      }
-
-      Object.assign(locationsFilter, {
-        'village.country._id': { '$in': req.body.filter.countries }
-      })
-    }
-  }
-
-  const project = {
-    name: 1,
-    project: 1,
-    geo: 1,
-    village: 1,
-    setup: 1,
-    stats: 1,
-    'monitor.status': 1,
-    'monitor.messages': 1
-  };
-  
-  let aggregation = Plant.aggregate()
-    .match(plantsFilter)
-    .lookup({
-      from: 'plants-status',
-      localField: '_id',
-      foreignField: '_id',
-      as: 'monitor'
-    })
-    .unwind('$monitor')
-    .project(project);
-
-  if (plantsStatusFilter) {
-    aggregation = aggregation.match(plantsStatusFilter);
-  }
-
-  delete project.village;
-  Object.assign(project, {
-    'village._id': 1,
-    'village.name': 1,
-    'village.geo': 1,
-    // 'village.country': 1
-    'village.country._id': 1,
-    'village.country.default-name': 1,
-    'village.country.aplha-3-code': 1,
-    'village.country.numeric-code': 1
-});
-
-aggregation = aggregation
-    .lookup({
-      from: 'villages',
-      localField: 'village',
-      foreignField: '_id',
-      as: 'village'
-    })
-    .unwind('$village')
-    .lookup({
-      from: 'countries',
-      localField: 'village.country',
-      foreignField: '_id',
-      as: 'village.country'
-    })
-    .unwind('$village.country');
-
-  if (locationsFilter) {
-    aggregation = aggregation.match(locationsFilter);
-  }
-
-  if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
-    aggregation = aggregation.sort(req._q.sort);
-  }
-
-  aggregation = aggregation.project(project);
-
-  if (JsonObjectHelper.isNotEmpty(req._q.proj)) {
-    aggregation = aggregation.project(req._q.proj);
-  }
-
-  aggregation = aggregation.allowDiskUse(true);
-
-  BasicRead.aggregate(req, res, next, Plant, aggregation, req._q.skip, req._q.limit);
-};
-
+// DEPRECATED
 // cRud/aggregateForGenTotalizers
 exports.aggregate_for_gen_totalizers = (req, res, next) => {
-  const isDailyPeriod = req.params.period === 'daily';
-  const filtersRepo = buildTotalizerFiltersRepo(req.body.filter, isDailyPeriod)
-  const project = {
-    project: 1,
-    village: 1,
-    'monitor.status': 1,
-  };
-  
-  let aggregation = Plant.aggregate()
-    .match(filtersRepo.getPlantIdsFilter)
-    .lookup({
-      from: 'plants-status',
-      localField: '_id',
-      foreignField: '_id',
-      as: 'monitor'
-    })
-    .unwind('$monitor')
-    .project(project);
+  PlantLogCtrl.e_gen(req, res, next);
+}
 
-  if (filtersRepo.plantsStatusFilter) {
-    aggregation = aggregation.match(filtersRepo.plantsStatusFilter);
-  }
-
-  {
-    const projectFields = Object.getOwnPropertyNames(project);
-    for (var i = 0; i < projectFields.length; i++) {
-      delete project[projectFields[i]];
-    }
-  }
-  project._id = 1
-
-  aggregation = aggregation
-    .lookup({
-      from: 'villages',
-      localField: 'village',
-      foreignField: '_id',
-      as: 'village'
-    })
-    .unwind('$village');
-
-  if (filtersRepo.locationsFilter) {
-    aggregation = aggregation.match(filtersRepo.locationsFilter);
-  }
-  aggregation = aggregation.project(project);
-  aggregation = aggregation.allowDiskUse(true);
-
-  aggregation.exec()
-  .then(readResult => {
-    if (!readResult.length) {
-      WellKnownJsonRes.okMulti(res);
-      return;
-    }
-    const readingsPlantIdsOrList = [];
-    readResult.map(itemBody => itemBody._id).forEach((plantId) => {
-      const plantIdTokens = plantId.split('|');
-        readingsPlantIdsOrList.push({
-          _id: new RegExp(`^\\|${plantIdTokens[1]}\\|${plantIdTokens[2]}\\|${plantIdTokens[3]}\\|.*`)
-        });
-    });
-  
-    if (readingsPlantIdsOrList.length) {
-      Object.assign(filtersRepo.readingsFilter, {
-        '$or': readingsPlantIdsOrList
-      });
-    }
-
-    // perform actual aggregation
-    //
-    const schema = require(`../../api/schemas/readings/gen-reading-${req.params.period}-log`);
-    const GenReadingDaily = require('../middleware/mongoose-db-conn').driverDBConnRegistry
-      .get('mcl')
-      .model(`GenReading${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schema);
-    aggregation = GenReadingDaily.aggregate()
-      .match(filtersRepo.readingsFilter)
-      .group(isDailyPeriod
-        ? {
-            _id: '$d',
-            ts : { '$first': '$ts' }, 
-            'batt-t-in': { '$avg': '$batt-t-in' },
-            'e-theoretical': { '$sum': '$e-theoretical' },
-            'e-delivered': { '$sum': '$e-delivered' },
-            'e-self-cons': { '$sum': '$e-self-cons' },
-            'sens-irrad': { '$avg': '$sens-irrad' },
-            'sens-t-in': { '$avg': '$sens-t-in' },
-            'sens-t-mod': { '$avg': '$sens-t-mod' },
-            'sens-t-out': { '$avg': '$sens-t-out' },
-        }
-        : {
-            _id: {
-                b: '$d',
-                e: '$dt'
-            },
-            'tsf' : { $first: '$ts' }, 
-            'tst' : { $first: '$tst' }, 
-            'batt-t-in': { '$avg': '$batt-t-in' },
-            'e-theoretical': { '$sum': '$e-theoretical' },
-            'e-delivered': { '$sum': '$e-delivered' },
-            'e-self-cons': { '$sum': '$e-self-cons' },
-            'sens-irrad': { '$avg': '$sens-irrad' },
-            'sens-t-in': { '$avg': '$sens-t-in' },
-            'sens-t-mod': { '$avg': '$sens-t-mod' },
-            'sens-t-out': { '$avg': '$sens-t-out' },
-        });
-
-    if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
-      aggregation = aggregation.sort(req._q.sort);
-    }  
-
-    if (JsonObjectHelper.isNotEmpty(req._q.proj)) {
-      aggregation = aggregation.project(req._q.proj);
-    }
-
-    BasicRead.aggregate(req, res, next, GenReadingDaily, aggregation, req._q.skip, req._q.limit);
-  })
-  .catch(readError => {
-    WellKnownJsonRes.errorDebug(res, readError);
-  });
-};
-
+// DEPRECATED
 // cRud/aggregateForSoldTotalizers
 exports.aggregate_for_sold_totalizers = (req, res, next) => {
-  exports.aggregateDelivery(req.params.period, req.body.filter, req._q)
-  .then(aggregationMeta => {
-    if (!aggregationMeta) {
-      WellKnownJsonRes.okMulti(res);
-      return;
-    }    
-    BasicRead.aggregate(req, res, next, aggregationMeta.model, aggregationMeta.aggregation, req._q.skip, req._q.limit);
-  })
-  .catch(readError => {
-    WellKnownJsonRes.errorDebug(res, readError);
-  });
+  PlantLogCtrl.e_deliv(req, res, next)
 };
 
+// DEPRECATED
 // cRud/aggregateForDeliveryTotalizers
 exports.aggregate_for_delivery_totalizers = (req, res, next) => {
-  exports.aggregateDeliveryByCustomerCategory(
-    req.params.period, 
-    req.body.filter, 
-    req.body.context, 
-    req._q)
-  .then(aggregationMeta => {
-    if (!aggregationMeta) {
-      WellKnownJsonRes.okMulti(res);
-      return;
-    }    
-    BasicRead.aggregate(req, res, next, aggregationMeta.model, aggregationMeta.aggregation, req._q.skip, req._q.limit);
-  })
-  .catch(readError => {
-    if (readError.status) {
-      WellKnownJsonRes.error(res, readError.status, [ readError.message ]);
-    } else {
-      WellKnownJsonRes.errorDebug(res, readError);
-    }
-  });
+  PlantLogCtrl.e_deliv_cat(req, res, next)
 };
 
+// DEPRECATED
 // cRud/aggregateForPlant
 exports.aggregate_for_plant = (req, res, next) => {
-  const plantFilter = {
-    enabled: true
-  }
-
-  if (req.body.filter && req.body.filter.plant) {
-    Object.assign(plantFilter, {
-      _id: req.body.filter.plant
-    })
-  }
-
-  const project = {
-    name: 1,
-    project: 1,
-    geo: 1,
-    village: 1,
-    dates: 1,
-    setup: 1,
-    tariffs: 1,
-    'add-ons': 1,
-    stats: 1,
-    organization: 1,
-    'monitor.status': 1,
-    'monitor.messages': 1
-  };
-  
-  let aggregation = Plant.aggregate()
-    .match(plantFilter)
-    .lookup({
-      from: 'plants-status',
-      localField: '_id',
-      foreignField: '_id',
-      as: 'monitor'
-    })
-    .unwind('$monitor')
-    .project(project);
-
-  delete project.village;
-  delete project.organization;
-  Object.assign(project, {
-    'village._id': 1,
-    'village.name': 1,
-    'village.geo': 1,
-    // 'village.country': 1
-    'village.country._id': 1,
-    'village.country.default-name': 1,
-    'village.country.aplha-3-code': 1,
-    'village.country.numeric-code': 1,
-    'parts.qty': 1,
-    'parts.info': 1,
-    'parts.part.category': 1,
-    'parts.part.label': 1,
-    'parts.part.hw': 1,
-    'parts.part.doc': 1,
-    'organization.office': 1,
-    'organization.customer-contacts': 1,
-    'organization.agents._id': 1,
-    'organization.agents.fullName': 1,
-    'organization.agents.contacts': 1,
-    'organization.om-managers': 1,
-    'organization.representatives._id': 1,
-    'organization.representatives.fullName': 1,
-    'organization.representatives.contacts': 1,
-  });
-
-  aggregation = aggregation
-    .lookup({
-      from: 'villages',
-      localField: 'village',
-      foreignField: '_id',
-      as: 'village'
-    })
-    .unwind('$village')
-    .lookup({
-      from: 'countries',
-      localField: 'village.country',
-      foreignField: '_id',
-      as: 'village.country'
-    })
-    .unwind('$village.country')
-    .lookup({
-      from: 'plants-parts',
-      localField: '_id',
-      foreignField: 'plant',
-      as: 'parts'
-    })
-    .lookup({
-      from: 'agents',
-      localField: 'organization.agents',
-      foreignField: '_id',
-      as: 'organization.agents'
-    })
-    .lookup({
-      from: 'representatives',
-      localField: 'organization.representatives',
-      foreignField: '_id',
-      as: 'organization.representatives'
-    })
-    ;
-
-  if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
-    aggregation = aggregation.sort(req._q.sort);
-  }
-  
-  aggregation = aggregation.project(project);
-
-  if (JsonObjectHelper.isNotEmpty(req._q.proj)) {
-    aggregation = aggregation.project(req._q.proj);
-  }
-
-  aggregation = aggregation.allowDiskUse(true);
-
-  BasicRead.aggregate(req, res, next, Plant, aggregation, req._q.skip, req._q.limit);
+  PlantCardCtrl.detailed(req, res, next)
 };
 
+// DEPRECATED
 // cRud/aggregateForFinancial
 exports.aggregate_for_financial = (req, res, next) => {
-  {
-    const missingParams = new Set();
-    if (!req.body.filter) {
-      missingParams.add('filter');
-    } else {
-      if (!req.body.filter['driver']) {
-        missingParams.add('driver');
-      }
-      if (!req.body.filter['plant']) {
-        missingParams.add('plant');
-      }
-      if (!req.body.filter['ts-from']) {
-          missingParams.add('ts-from');
-      }
-      if (!req.body.filter['ts-to']) {
-        missingParams.add('ts-to');
-      }
-    }
-    if (missingParams.size !== 0) {
-        WellKnownJsonRes.error(res, 400, [`missing required params: \'${[...missingParams].join('\', \'')}\'`]);
-        return;
-    }
-  }
-
-  const finPerformanceFilter = {
-  };
-
-  finPerformanceFilter.ts = finPerformanceFilter.ts || {};
-  finPerformanceFilter.ts['$gte'] = new Date(req.body.filter['ts-from']);
-  finPerformanceFilter.ts = finPerformanceFilter.ts || {};
-  finPerformanceFilter.ts['$lte'] = new Date(req.body.filter['ts-to']);
-
-  finPerformanceFilter._id = new RegExp(`^${req.body.filter['plant'].replace(/\|/g, "\\|")}n\\d+\\|$`);
-
-  // select driver db key and site
-  //
-  const mongooseDbConn = require('../middleware/mongoose-db-conn');
-  const driverDbKey = req.body.filter['driver'];
-  const schemaFinancialPerformanceOnPeriod = require(`../schemas/kpi/financial-forecast-${req.params.period}`);
-  const FinancialPerformanceOnPeriod = mongooseDbConn.driverDBConnRegistry
-    .get(driverDbKey)
-    .model(`FinancialPerformance${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schemaFinancialPerformanceOnPeriod);
-
-  if (!req._q.sort.length) {
-    req._q.sort = {
-      ts: 1
-    }
-  }
-
-  BasicRead.all(req, res, next, FinancialPerformanceOnPeriod, finPerformanceFilter, req._q.skip, req._q.limit, req._q.proj, req._q.sort);
+  PlantLogCtrl.financial(req, res, next)
 };
 
 // Crud
 exports.create = (req, res, next) => {
   VillageCtrl.village_exists_by_id(req.body.village)
-    .then(() => exports.generate_plant_id(req.body))
+    .then(() => exports.generatePlantId(req.body))
     .then((generatedPlantId) => {
       const plant = new Plant({
         _id: generatedPlantId,
@@ -510,7 +107,7 @@ exports.create = (req, res, next) => {
 // utils
 
 // cRud/existsById
-exports.plant_exists_by_id = plantId => {
+exports.plantExistsById = plantId => {
   return new Promise((resolve, reject) => {
     Plant.countDocuments({ _id: plantId })
       .exec()
@@ -525,198 +122,34 @@ exports.plant_exists_by_id = plantId => {
   });
 };
 
-// other/generatePlantId
-exports.generate_plant_id = (target = { project: {} }) => {
+// cRud/filteredPlantIds
+exports.filteredPlantIds = (plantsFilter, plantsStatusFilter, plantsLocationsFilter) => {
   return new Promise((resolve, reject) => {
-    if (!target.project.id) {
-      reject(new Error('missing project \'id\' required field'));
-    }
-    if (!target.project.code) {
-        reject(new Error('missing project \'code\' required field'));
-    }
-
-    // basic regex: /^\|\w+\|\w+\|/
-    const queryByIdRegex = new RegExp(`^\\|${target.project.id}\\|${target.project.code}\\|`);
-
-    Plant.countDocuments({ '_id': queryByIdRegex })
-      .exec()
-      .then(countResult => {
-        resolve(`|${target.project.id}|${target.project.code}|${countResult+1}|`)
-      })
-      .catch(countError => {
-        reject(countError);
-      });
-  });
-}
-
-exports.aggregateDelivery = (period = 'daily', filter = {}, q = { sort: { _id: 1 } }) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const isDailyPeriod = period === 'daily';
-      const filtersRepo = buildTotalizerFiltersRepo(filter, isDailyPeriod)
-    
-      const project = {
-        project: 1,
-        village: 1,
-        'monitor.status': 1,
-      };
-      
-      let aggregation = Plant.aggregate()
-        .match(filtersRepo.getPlantIdsFilter)
-        .lookup({
-          from: 'plants-status',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'monitor'
-        })
-        .unwind('$monitor')
-        .project(project);
-    
-      if (filtersRepo.plantsStatusFilter) {
-        aggregation = aggregation.match(filtersRepo.plantsStatusFilter);
-      }
-    
-      {
-        const projectFields = Object.getOwnPropertyNames(project);
-        for (var i = 0; i < projectFields.length; i++) {
-          delete project[projectFields[i]];
-        }
-      }
-      project._id = 1
-    
-      aggregation = aggregation
-        .lookup({
-          from: 'villages',
-          localField: 'village',
-          foreignField: '_id',
-          as: 'village'
-        })
-        .unwind('$village');
-    
-      if (filtersRepo.locationsFilter) {
-        aggregation = aggregation.match(filtersRepo.locationsFilter);
-      }
-      aggregation = aggregation.project(project);
-      aggregation = aggregation.allowDiskUse(true);
-    
-      aggregation.exec()
-      .then(readResult => {
-        if (!readResult.length) {
-          resolve();
-          return;
-        }
-        const readingsPlantIdsOrList = [];
-        readResult.map(itemBody => itemBody._id).forEach((plantId) => {
-          const plantIdTokens = plantId.split('|');
-            readingsPlantIdsOrList.push({
-              _id: new RegExp(`^\\|${plantIdTokens[1]}\\|${plantIdTokens[2]}\\|${plantIdTokens[3]}\\|.*`)
-            });
-        });
-      
-        if (readingsPlantIdsOrList.length) {
-          Object.assign(filtersRepo.readingsFilter, {
-            '$or': readingsPlantIdsOrList
-          });
-        }
-    
-        // perform actual aggregation
-        //
-        const schema = require(`../../api/schemas/readings/meter-reading-${period}-log`);
-        const MeterReadingPeriodModel = require('../middleware/mongoose-db-conn').driverDBConnRegistry
-          .get('spm')
-          .model(`MeterReading${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
-        aggregation = MeterReadingPeriodModel.aggregate()
-          .match(filtersRepo.readingsFilter)
-          .group(isDailyPeriod
-            ? {
-                _id: '$d',
-                'ts' : { $first: '$ts' },
-                'e-sold-kwh' : { $sum: '$e-sold-kwh' },
-                'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' },
-                'sg-target-ccy' : { $sum: '$sg-target-ccy' },
-                'total-conn' : { $sum: '$total-conn' },
-                'av-perc' : { $avg: '$av-perc' },
-                'tx-e-local-ccy' : { $sum: '$tx-e-local-ccy' },
-                'tx-e-target-ccy' : { $sum: '$tx-e-target-ccy' },
-                'total-tx' : { $sum: '$total-tx' },
-            }
-            : {
-                _id: {
-                    b: '$d',
-                    e: '$dt',
-                },
-                'tsf' : { $first: '$ts' }, 
-                'tst' : { $first: '$tst' }, 
-                'e-sold-kwh' : { $sum: '$e-sold-kwh' }, 
-                'e-sold-target-ccy' : { $sum: '$e-sold-target-ccy' }, 
-                'sg-target-ccy' : { $sum: '$sg-target-ccy' },
-                'total-conn' : { $sum: '$total-conn' },
-                'av-perc' : { $avg: '$av-perc' },
-                'tx-e-local-ccy' : { $sum: '$tx-e-local-ccy' },
-                'tx-e-target-ccy' : { $sum: '$tx-e-target-ccy' },
-                'total-tx' : { $sum: '$total-tx' },
-            });
-    
-        if (JsonObjectHelper.isNotEmpty(q.sort)) {
-          aggregation = aggregation.sort(q.sort);
-        }  
-    
-        if (JsonObjectHelper.isNotEmpty(q.proj)) {
-          aggregation = aggregation.project(q.proj);
-        }
-    
-        resolve({
-          model: MeterReadingPeriodModel,
-          aggregation
-        })
-      })
-      .catch(error => {
-        reject(error);
-      });        
-    } catch (error) {
-      reject(error);
-    }
-  });
-};
-
-exports.aggregateDeliveryByCustomerCategory = (
-    period = 'daily',
-    filter = {},
-    context = {
-      aggregator: undefined, 
-      'exchange-rate': undefined, 
-    }, 
-    q = { sort: { _id: 1 } },
-) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const deliveryGrouping = buildDeliveryGrouping(period, context);
-      if (!deliveryGrouping) {
-        const error = new Error(`unsupported aggregator: \'${context.aggregator}\'`);
-        error.status = 400;
-        reject(error);
-        return;
-      }
-
-      const isDailyPeriod = period === 'daily';
-      const filtersRepo = buildTotalizerFiltersRepo(filter, isDailyPeriod)
-
-      let aggregation = Plant.aggregate()
-        .match(filtersRepo.getPlantIdsFilter)
-        .lookup({
-          from: 'plants-status',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'monitor'
-        })
-        .unwind('$monitor')
+    let aggregation = Plant.aggregate()
+      // plantsFilter is always not empty
+      // at least selects enabled plants
+      .match(plantsFilter)
       //
       ;
 
-      if (filtersRepo.plantsStatusFilter) {
-        aggregation = aggregation.match(filtersRepo.plantsStatusFilter);
-      }
+    if (plantsStatusFilter) {
+      aggregation = aggregation
+        .lookup({
+          from: 'plants-status',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'monitor'
+        })
+        .unwind('$monitor')
+        .project({
+          project: 1,
+          village: 1,
+          'monitor.status': 1,
+        })
+        .match(plantsStatusFilter);
+    }
 
+    if (plantsLocationsFilter) {
       aggregation = aggregation
         .lookup({
           from: 'villages',
@@ -725,274 +158,128 @@ exports.aggregateDeliveryByCustomerCategory = (
           as: 'village'
         })
         .unwind('$village')
+        .project({
+          village: 1,
+        })
+        .match(plantsLocationsFilter);
+    }
+    aggregation = aggregation.project({ _id: 1 });
+    aggregation = aggregation.allowDiskUse(true);
+
+    aggregation.exec()
+      .then(readResult => resolve(readResult))
+      .catch(error => reject(error))
+  })
+};
+
+// cRud/filteredDriverPlants
+exports.filteredDriverPlants = (plantsFilter, plantsStatusFilter, plantsLocationsFilter) => {
+  return new Promise((resolve, reject) => {
+    let aggregation = Plant.aggregate()
+      .match(plantsFilter)
       //
       ;
 
+    if (plantsStatusFilter) {
       aggregation = aggregation
         .lookup({
-          from: 'plants-drivers',
+          from: 'plants-status',
           localField: '_id',
           foreignField: '_id',
-          as: 'driver'
+          as: 'monitor'
         })
-        .unwind('$driver')
+        .unwind('$monitor')
+        .match(plantsStatusFilter);
+    }
+
+    if (plantsLocationsFilter) {
+      aggregation = aggregation
+        .lookup({
+          from: 'villages',
+          localField: 'village',
+          foreignField: '_id',
+          as: 'village'
+        })
+        .unwind('$village')
+        .match(plantsLocationsFilter);
+    }
+
+    aggregation = aggregation
+      .lookup({
+        from: 'plants-drivers',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'driver'
+      })
+      .unwind('$driver')
+      .group({
+        _id: '$driver.e-deliv',
+        plants: { $addToSet: '$_id' }
+      })
       //
       ;
 
-      if (filtersRepo.locationsFilter) {
-        aggregation = aggregation.match(filtersRepo.locationsFilter);
-      }
-      aggregation = aggregation.group({
-        _id: '$driver.deliv-driver',
-        plants: { $addToSet: '$_id' }
-      });
-      aggregation = aggregation.allowDiskUse(true);
+    aggregation = aggregation.allowDiskUse(true);
 
-      aggregation.exec()
-      .then(readResult => {
-        if (!readResult.length) {
-          resolve();
-          return;
-        } else if (readResult.length !== 1) {
-          const error = new Error(`unable to query more than one driver at once:`);
-          error.status = 501;
-          reject(error)
-          return;
-        }
+    aggregation.exec()
+      .then(readResult => resolve(readResult))
+      .catch(error => reject(error))
+  })
+};
 
-        // perform actual aggregation
-        //
-        const schema = require(`../../api/schemas/readings/customer-${period}-log`);
-        const CustomerPeriodModel = require('../middleware/mongoose-db-conn').driverDBConnRegistry
-          .get(readResult[0]._id)
-          .model(`Customer${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
-        aggregation = CustomerPeriodModel.aggregate()
-          .match({
-            ...filtersRepo.readingsFilter,
-            '_id.m': readResult[0].plants == 1
-              ? readResult[0].plants[0]
-              : { $in: readResult[0].plants }
-          })
-          .group(deliveryGrouping);
-    
-        if (JsonObjectHelper.isNotEmpty(q.sort)) {
-          aggregation = aggregation.sort(q.sort);
-        }  
-    
-        if (JsonObjectHelper.isNotEmpty(q.proj)) {
-          aggregation = aggregation.project(q.proj);
-        }
-
-        resolve({
-          model: CustomerPeriodModel,
-          aggregation
-        });
-      })
-      .catch(error => {
-        reject(error);
-      });
-    } catch (error) {
-      reject(error);
+// other/generatePlantId
+exports.generatePlantId = (target = { project: {} }) => {
+  return new Promise((resolve, reject) => {
+    if (!target.project.id) {
+      reject(new Error('missing project \'id\' required field'));
     }
+    if (!target.project.code) {
+      reject(new Error('missing project \'code\' required field'));
+    }
+
+    // basic regex: /^\|\w+\|\w+\|/
+    const queryByIdRegex = new RegExp(`^\\|${target.project.id}\\|${target.project.code}\\|`);
+
+    Plant.countDocuments({ '_id': queryByIdRegex })
+      .exec()
+      .then(countResult => {
+        resolve(`|${target.project.id}|${target.project.code}|${countResult + 1}|`)
+      })
+      .catch(countError => {
+        reject(countError);
+      });
   });
+}
+
+// DEPRECATED
+exports.aggregateDelivery = (
+  period = 'daily',
+  filter = {},
+  q = { sort: { _id: 1 } }
+) => {
+  return PlantLogCtrl.aggregateDelivery(period, filter, q);
+};
+
+// DEPRECATED
+exports.aggregateDeliveryByCustomerCategory = (
+  period = 'daily',
+  filter = {},
+  context = {
+    aggregator: undefined,
+    'exchange-rate': undefined,
+  },
+  q = { sort: { _id: 1 } },
+) => {
+  return PlantLogCtrl.aggregateDeliveryByCustomerCategory(period, filter, context, q);
 };
 
 
 //
-// private 
+// private part
 
-const buildTotalizerFiltersRepo = (inputFilter, isDailyPeriod) => {
-  const readingsFilter = {
-  };
-  const getPlantIdsFilter = {
-    enabled: true
-  };
-  let plantsStatusFilter = undefined;
-  let locationsFilter = undefined;
-
-  // retrieve totalizers filter: plant ids + date range
-  //
-  if (inputFilter) {
-    if (inputFilter.tsFrom) {
-      readingsFilter.ts = readingsFilter.ts || {};
-      readingsFilter.ts['$gte'] = new Date(inputFilter.tsFrom);
-    }
-    if (inputFilter.tsTo) {
-      const toFieldName = isDailyPeriod
-          ? 'ts'
-          : 'tst';
-      readingsFilter[toFieldName] = readingsFilter[toFieldName] || {};
-      readingsFilter[toFieldName]['$lte'] = new Date(inputFilter.tsTo);
-    }
-    if (inputFilter.plants && inputFilter.plants.length) {
-      Object.assign(getPlantIdsFilter, {
-        _id: { '$in': inputFilter.plants }
-      })
-    }
-    if (inputFilter.projects && inputFilter.projects.length) {
-      Object.assign(getPlantIdsFilter, {
-        'project.id': { '$in': inputFilter.projects }
-      })
-    }
-    if (inputFilter['plants-status'] && inputFilter['plants-status'].length) {
-      plantsStatusFilter = {
-        'monitor.status': { '$in': inputFilter['plants-status'] }
-      }
-    }
-    if (inputFilter.villages && inputFilter.villages.length) {
-      locationsFilter = {
-        'village._id': { '$in': inputFilter.villages.map(idAsString => new mongoose.Types.ObjectId(idAsString)) }
-      }
-    }
-    if (inputFilter.countries && inputFilter.countries.length) {
-      if (!locationsFilter) {
-        locationsFilter = {}
-      }
-      Object.assign(locationsFilter, {
-        'village.country': { '$in': inputFilter.countries }
-      })
-    }
-    if (inputFilter.categories && inputFilter.categories.length) {
-      readingsFilter.ct = inputFilter.categories.length === 1
-        ? inputFilter.categories[0]
-        : { $in: inputFilter.categories };
-    }
-  }
-
-  return {
-    readingsFilter,
-    getPlantIdsFilter,
-    plantsStatusFilter,
-    locationsFilter,
-  };
-};
-
-const buildDeliveryGrouping = (period, context) => {
-  const aggregatorStrategy = deliveryGroupingStrategy[context.aggregator || 'default'];
-  try {
-    return {
-      _id: aggregatorStrategy.groupId[period](),
-      ...aggregatorStrategy.accumulators[period](context),
-    };    
-  } catch {
-    return undefined;
-  }
-};
-
-const buildDeliveryDailyGroupId = () => {
-  return '$d';
-};
-
-const buildDeliveryRangedGroupId = () => {
-  return {
-    b: '$d',
-    e: '$dt',
-  }
-};
-
-const buildDeliveryDailyAccumulators = (context) => {
-  const result = {
-    'ts': { $first: '$ts' },
-    'avc': { $sum: '$avc' },
-    'b-lccy': { $avg: '$b-lccy' },
-    'b-tccy': { $avg: '$b-tccy' },
-    'ct': { $addToSet: '$ct' },
-    'es': { $sum: '$es' }, 
-    'r-es-lccy': { $sum: '$r-es-lccy' }, 
-    'r-es-tccy': { $sum: '$r-es-tccy' }, 
-    'tx-es-c': { $sum: '$tx-es-c' }, 
-    'tx-es-lccy': { $sum: '$tx-es-lccy' }, 
-    'tx-es-tccy': { $sum: '$tx-es-tccy' }, 
-  };
-  applyCustomExchangeRate(result, context['exchange-rate'])
-  return result;
-};
-
-const buildDeliveryRangedAccumulators = (context) => {
-  const result = {
-    'tsf' : { $first: '$ts' }, 
-    'tst' : { $first: '$tst' }, 
-    'avc': { $sum: '$avc' },
-    'b-lccy': { $avg: '$b-lccy' },
-    'b-tccy': { $avg: '$b-tccy' },
-    'ct': { $addToSet: '$ct' },
-    'es': { $sum: '$es' }, 
-    'r-es-lccy': { $sum: '$r-es-lccy' }, 
-    'r-es-tccy': { $sum: '$r-es-tccy' }, 
-    'tx-es-c': { $sum: '$tx-es-c' }, 
-    'tx-es-lccy': { $sum: '$tx-es-lccy' }, 
-    'tx-es-tccy': { $sum: '$tx-es-tccy' }, 
-  };
-  applyCustomExchangeRate(result, context['exchange-rate'])
-  return result;
-};
-
-const applyCustomExchangeRate = (target, customExchangeRate) => {
-  if (!customExchangeRate) {
-    return;
-  }
-  // if a custom exchange rate is passed, let's overwrite involved accumulator
-  target['b-tccy'] = { $avg: { $multiply: [ '$b-lccy', customExchangeRate ] } };
-  target['r-es-tccy'] = { $sum: { $multiply: [ '$r-es-lccy', customExchangeRate ] } };
-  target['tx-es-tccy'] = { $sum: { $multiply: [ '$tx-es-lccy', customExchangeRate ] } };
-}
-
-const buildDeliveryRangedGroupByCategoriesId = () => {
-  return {
-    ...buildDeliveryRangedGroupId(),
-    ct: "$ct",
-  }
-}
-
-const buildDeliveryRangedAccumulatorsByCategories = (context) => {
-  const result = buildDeliveryRangedAccumulators(context);
-  delete result.ct;
-  return result;
-}
-
-const deliveryGroupingStrategy = {
-  default: {
-    groupId: {
-      daily: buildDeliveryDailyGroupId,
-      weekly: buildDeliveryRangedGroupId,
-      monthly: buildDeliveryRangedGroupId,
-      yearly: buildDeliveryRangedGroupId,
-    },
-    accumulators: {
-      daily: (context) => buildDeliveryDailyAccumulators(context),
-      weekly: (context) => buildDeliveryRangedAccumulators(context),
-      monthly: (context) => buildDeliveryRangedAccumulators(context),
-      yearly: (context) => buildDeliveryRangedAccumulators(context),
-    }
-  },
-  categories: {
-    groupId: {
-      daily: () => {
-        return {
-          d: buildDeliveryDailyGroupId(),
-          ct: "$ct",
-        };
-      },
-      weekly: buildDeliveryRangedGroupByCategoriesId,
-      monthly: buildDeliveryRangedGroupByCategoriesId,
-      yearly: buildDeliveryRangedGroupByCategoriesId,
-    },
-    accumulators: {
-      daily: (context) => {
-        const result = buildDeliveryDailyAccumulators(context);
-        delete result.ct;
-        return result;
-      },
-      weekly: (context) => buildDeliveryRangedAccumulatorsByCategories(context),
-      monthly: (context) => buildDeliveryRangedAccumulatorsByCategories(context),
-      yearly: (context) => buildDeliveryRangedAccumulatorsByCategories(context),
-    }
-  },
-};
-
-  // const result = {
-  //   ...groupingByPeriod[period]
-  // };
+// const result = {
+//   ...groupingByPeriod[period]
+// };
 
 //   const fieldsNamesToAggregate = Object.keys(projection);
 //   const aggregations = buildReadingsAggregation(exchangeRate);

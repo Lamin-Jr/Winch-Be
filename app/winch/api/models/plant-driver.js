@@ -1,20 +1,21 @@
 const mongoose = require('mongoose');
 
+const {
+  buildPlantServicesDriversSubSchema,
+} = require('./shared/plant');
+
 const plantDriverSchema = mongoose.Schema(
   {
     _id: String, // plant id
-    'gen-drivers': {
+    'e-gen': {
       type: Array,
       items: {
         type: String,
         minItems: 1,
       },
-      required: true,
     },
-    'deliv-driver': {
-      type: String,
-      required: true,
-    },
+    'e-deliv': String,
+    ...buildPlantServicesDriversSubSchema(),
     accounting: {
       xform: {
         m: {
@@ -29,7 +30,7 @@ const plantDriverSchema = mongoose.Schema(
           type: String,
           required: true,
         },
-      }          
+      }
     },
   },
   {

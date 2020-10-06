@@ -58,6 +58,11 @@ driverDBConnRegistry.add('mcl', {
   'connected': handleConnectionUp,
   'disconnected': handleConnectionDown
 });
+driverDBConnRegistry.add('mopo', {
+  'error': handleAfterConnectionError,
+  'connected': handleConnectionUp,
+  'disconnected': handleConnectionDown
+});
 
 
 exports.boot = () => {

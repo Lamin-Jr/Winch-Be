@@ -54,13 +54,13 @@ exports.create = (req, res, next) => {
 // utils
 
 // cRud/existsById
-exports.plant_exists_by_id = plantId => {
+exports.plant_part_exists_by_id = plantId => {
   return new Promise((resolve, reject) => {
-    Plant.countDocuments({ _id: plantId })
+    PlantPart.countDocuments({ plant: plantId })
       .exec()
       .then(countResult => {
         countResult === 0
-          ? reject(new Error(`plant '${plantId}' does not exist`))
+          ? reject(new Error(`part plant with plant id '${plantId}' does not exist`))
           : resolve();
       })
       .catch(countError => {

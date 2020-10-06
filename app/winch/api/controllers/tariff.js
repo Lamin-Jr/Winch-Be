@@ -27,7 +27,7 @@ exports.autocomplete = (req, res, next) => {
 
 // Crud
 exports.create = (req, res, next) => {
-  PlantCtrl.plant_exists_by_id(req.body.plant)
+  PlantCtrl.plantExistsById(req.body.plant)
     .then(() => {
       const id = new mongoose.Types.ObjectId();
       const now = new Date();

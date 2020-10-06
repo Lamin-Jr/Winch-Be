@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
-// Creator
 //
+// Creator
+
 module.exports.makeCreator = (creatorId, role) => {
     return {
         _crtr: {
@@ -48,8 +49,9 @@ module.exports.creatorPrj = (prjValue) => {
 }
 
 
-// Updater
 //
+// Updater
+
 module.exports.makeLastUpdater = (updaterId, role) => {
     return {
         '_last-updtr': {
@@ -110,21 +112,24 @@ module.exports.fullCrudActorsPrj = (prjValue) => {
 }
 
 
-// History
 //
-module.exports.history = {
-    _hist: {
-        r: mongoose.Schema.Types.ObjectId,
-        p: mongoose.Schema.Types.ObjectId,
-        f: {
-            type: Date,
-            required: true
-        },
-        t: {
-            type: Date,
-            default: new Date(process.env.DATE_MAX)
+// History
+
+module.exports.buildHistoryModel = (idSchema = mongoose.Schema.Types.ObjectId) => {
+    return {
+        _hist: {
+            r: idSchema,
+            p: idSchema,
+            f: {
+                type: Date,
+                required: true,
+            },
+            t: {
+                type: Date,
+                default: new Date(process.env.DATE_MAX)
+            }
         }
-    }
+    };
 }
 
 module.exports.makeHistory = (root, parent, from, to) => {
@@ -148,8 +153,9 @@ module.exports.makeHistoryOnUpdateNewTarget = (targetUpdateDate, storedTarget) =
 }
 
 
-// Person
 //
+// Person
+
 module.exports.makePerson = (title, firstName, lastName) => {
     return {
         'title': title,
@@ -176,8 +182,9 @@ module.exports.makePersonModel = (conf = { title: {}, firstName: {}, lastName: {
 }
 
 
-// Contact
 //
+// Contact
+
 module.exports.makeContact = (type, icon, address) => {
     return {
         type: type,

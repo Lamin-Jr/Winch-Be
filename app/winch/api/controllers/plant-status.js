@@ -42,7 +42,7 @@ exports.create = (req, res, next) => {
     return;
   }
 
-  PlantCtrl.plant_exists_by_id(plantId)
+  PlantCtrl.plantExistsById(plantId)
   .then(() => {
     const plantStatus = new PlantStatus({
       _id: plantId,

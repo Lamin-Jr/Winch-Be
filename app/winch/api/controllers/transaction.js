@@ -23,7 +23,7 @@ exports.create = (req, res, next) => {
     const transact = new Transaction({
         _id: id,
         ...mongooseMixins.makeCreatorByUserData(req.userData),
-        ...mongooseMixins.makeHistoryOnCreate(now, id),
+        ...mongooseMixins.makeHistoryOnCreate(new Date(), id),
         payer: {
             label: req.body.payerLabel,
             customer: {}

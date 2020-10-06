@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const mongooseGeoJsonSchema = require('mongoose-geojson-schema');
+
 const mongooseMixins = require('../../api/middleware/mongoose-mixins');
 // const { defaultUpdateOptions } = require('../../api/middleware/mongoose-util');
 
@@ -10,6 +12,7 @@ const { buildFeaturesCollection } = require('../winch-boot/utils');
 
 const creator = new mongoose.Types.ObjectId(process.env.WCH_AUTHZ_SYSTEM_ID);
 const creatorRole = process.env.WCH_AUTHZ_SYSTEM_ROLE;
+
 
 module.exports.buildVillages = () => {
   const entityName = 'village';
@@ -75,7 +78,7 @@ module.exports.buildVillages = () => {
 }
 
 
-function getVillages() {
+function getVillages () {
   const villages = [
     // -> Angola
     // - corrected: buildVillage('School Luena', -11.715636, 19.910525, 'AO'),
@@ -128,7 +131,7 @@ function getVillages() {
     buildVillage('Aweno Olwi', 3.719, 32.7478, 'UG'),
     buildVillage('Ayuu Alali', 3.53991, 32.56081, 'UG'),
     buildVillage('Bugoma', -0.056834, 32.140917, 'UG'),
-    buildVillage('Burkina', -0.048274, 32.211167, 'UG'),
+    buildVillage('Bukina', -0.048274, 32.211167, 'UG'),
     buildVillage('Kapeta', 3.504054, 32.591669, 'UG'),
     // - corrected buildVillage('Labayango (School and Village)', 3.520616, 32.865017, 'UG'),
     buildVillage('Labayango', 3.520616, 32.865017, 'UG'),
@@ -157,7 +160,7 @@ function getVillages() {
 }
 
 
-function buildVillage(name, lat, lng, country) {
+function buildVillage (name, lat, lng, country) {
   const result = {
     _id: new mongoose.Types.ObjectId(),
     ...mongooseMixins.makeCreator(creator, creatorRole),

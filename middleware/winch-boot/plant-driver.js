@@ -15,8 +15,8 @@ module.exports.buildPlantDrivers = () => {
       };
       const update = {
         $set: {
-          'gen-drivers':   plantDriver['gen-drivers'],
-          'deliv-driver':  plantDriver['deliv-driver'],
+          'e-gen':   plantDriver['e-gen'],
+          'e-deliv':  plantDriver['e-deliv'],
           accounting:      plantDriver.accounting,
         }
       };
@@ -58,9 +58,9 @@ function getPlantDrivers() {
   return [
     // -> DEMO
     { 
-      "_id" : "DEMO",
-      'gen-drivers': [ 'not_avail' ],
-      'deliv-driver': 'spm',
+      '_id' : "DEMO",
+      'e-gen': [ 'not_avail' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           'm': 'demoMXform',
@@ -71,9 +71,9 @@ function getPlantDrivers() {
     },
     // -> Adido
     { 
-      "_id" : "|BEN|BEN_2019_005|1|",
-      'gen-drivers': [ 'mcl', 'exn' ],
-      'deliv-driver': 'spm',
+      '_id' : '|BEN|BEN_2019_005|1|',
+      'e-gen': [ 'mcl', 'exn' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -83,9 +83,9 @@ function getPlantDrivers() {
     // -> WP1
     // -> WP1/Rokonta
     { 
-      "_id" : "|WP1|SLL_2019_001|42|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|42|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -94,9 +94,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Mara
     { 
-      "_id" : "|WP1|SLL_2019_001|31|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|31|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -105,9 +105,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Mabang
     { 
-      "_id" : "|WP1|SLL_2019_001|43|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|43|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -116,9 +116,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Batkanu
     { 
-      "_id" : "|WP1|SLL_2019_001|7|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|7|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -127,9 +127,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Kamaranka
     { 
-      "_id" : "|WP1|SLL_2019_001|27|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|27|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -138,9 +138,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Kagbere
     { 
-      "_id" : "|WP1|SLL_2019_001|8|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|8|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -149,9 +149,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Fintonia
     { 
-      "_id" : "|WP1|SLL_2019_001|46|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|46|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -160,9 +160,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Kathantha Yimboi
     { 
-      "_id" : "|WP1|SLL_2019_001|5|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|5|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -171,9 +171,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Sinkunia
     { 
-      "_id" : "|WP1|SLL_2019_001|55|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|55|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -182,9 +182,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Musaia
     { 
-      "_id" : "|WP1|SLL_2019_001|65|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|65|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -193,9 +193,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Bafodia
     { 
-      "_id" : "|WP1|SLL_2019_001|69|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|69|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),
@@ -204,9 +204,9 @@ function getPlantDrivers() {
     },
     // -> WP1/Yiffin
     { 
-      "_id" : "|WP1|SLL_2019_001|87|",
-      'gen-drivers': [ 'sma' ],
-      'deliv-driver': 'spm',
+      '_id' : '|WP1|SLL_2019_001|87|',
+      'e-gen': [ 'sma' ],
+      'e-deliv': 'spm',
       accounting: {
         xform: {
           ...spmXform(),

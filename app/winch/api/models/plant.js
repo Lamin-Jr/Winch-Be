@@ -3,6 +3,11 @@ const Double = require('@mongoosejs/double');
 
 const mongooseMixins = require('../../../../api/middleware/mongoose-mixins')
 
+const { 
+  plantServiceIdSchema, 
+} = require('./shared/plant');
+
+
 const plantSchema = mongoose.Schema({
   _id: String,
   ...mongooseMixins.fullCrudActors,
@@ -66,7 +71,8 @@ const plantSchema = mongoose.Schema({
   'add-ons': {
     type: Array,
     items: {
-      type: mongoose.Schema.Types.ObjectId
+      type: Object,
+      properties: plantServiceIdSchema
     },
   },
   stats: {
