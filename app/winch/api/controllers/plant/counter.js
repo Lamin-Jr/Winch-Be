@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
 
-// const Plant = require('../../models/plant');
-
 const PlantCtrl = require('../../controllers/plant');
 
 // const {
@@ -22,6 +20,7 @@ const {
 // const mongooseMixins = require('../../../../../api/middleware/mongoose-mixins');
 
 const {
+  buildPlantFilters,
   buildPlantFiltersRepo
 } = require('./_shared')
 
@@ -29,7 +28,46 @@ const {
 //
 // endpoint-related
 
-// cRud/basic
+// cRud/filterItems
+exports.filterItems = (req, res, next) => {
+  const plantFilters = buildPlantFilters(req.body.filter)
+
+  PlantCtrl.filteredPlants(
+    plantFilters.plantsFilter,
+    plantFilters.plantsStatusFilter || {},
+    plantFilters.plantsLocationsFilter || {},
+    {
+      _id: 1,
+      'project.id': 1,
+      'monitor.status': 1,
+      'village._id': 1,
+      'village.country': 1
+    })
+    .then(readResult => new Promise(resolve => {
+      const counters = {
+        c: new Set(),
+        v: new Set(),
+        p: new Set(),
+        ps: new Set(),
+      }
+      readResult.forEach(plant => {
+        counters.c.add(plant.village.country);
+        counters.v.add(plant.village._id);
+        counters.p.add(plant._id);
+        counters.ps.add(plant.monitor.status);
+      });
+      resolve({
+        countries: counters.c.size,
+        villages: counters.v.size,
+        plants: counters.p.size,
+        'plant-statuses': counters.ps.size,
+      })
+    }))
+    .then(countResult => WellKnownJsonRes.okSingle(res, countResult))
+    .catch(readError => WellKnownJsonRes.errorDebug(res, readError));
+}
+
+// cRud/eCustomers
 exports.eCustomers = (req, res, next) => {
   const plantFiltersRepo = buildPlantFiltersRepo(req.body.filter, true);
 
@@ -51,7 +89,6 @@ exports.eCustomers = (req, res, next) => {
           ? readResult[0].plants[0]
           : { $in: readResult[0].plants },
       });
-      console.log(`PD TGTF: ${JSON.stringify(plantFiltersRepo.targetFilter)}`)
 
       // perform actual aggregation
       //
@@ -68,7 +105,7 @@ exports.eCustomers = (req, res, next) => {
           },
           consuming: {
             $sum: {
-              $cond: [ { $gt: ["$es", 0.0] }, 1, 0 ]
+              $cond: [{ $gt: ["$es", 0.0] }, 1, 0]
             }
           },
           working: { $sum: 1 },

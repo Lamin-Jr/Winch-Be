@@ -6,10 +6,10 @@ const VillageCtrl = require('./village');
 const PlantCardCtrl = require('./plant/card');
 const PlantLogCtrl = require('./plant/log');
 
-// const { 
-//   // JsonObjectTypes,
-//   JsonObjectHelper, 
-// } = require('../../../../api/lib/util/json-util');
+const {
+  // JsonObjectTypes,
+  JsonObjectHelper,
+} = require('../../../../api/lib/util/json-util');
 const {
   WellKnownJsonRes,
   // JsonResWriter,
@@ -122,49 +122,31 @@ exports.plantExistsById = plantId => {
   });
 };
 
+// cRud/filteredPlants
+exports.filteredPlants = (plantsFilter, plantsStatusFilter, plantsLocationsFilter, projection) => {
+  return new Promise((resolve, reject) => {
+    let aggregation = buildFilterPlantAggregation(plantsFilter, plantsStatusFilter, plantsLocationsFilter, false)
+
+    if (JsonObjectHelper.isNotEmpty(projection)) {
+      aggregation = aggregation.project(projection);
+    }
+
+    aggregation = aggregation.allowDiskUse(true);
+
+    aggregation.exec()
+      .then(readResult => resolve(readResult))
+      .catch(error => reject(error))
+  })
+};
+
 // cRud/filteredPlantIds
 exports.filteredPlantIds = (plantsFilter, plantsStatusFilter, plantsLocationsFilter) => {
   return new Promise((resolve, reject) => {
-    let aggregation = Plant.aggregate()
-      // plantsFilter is always not empty
-      // at least selects enabled plants
-      .match(plantsFilter)
+    let aggregation = buildFilterPlantAggregation(plantsFilter, plantsStatusFilter, plantsLocationsFilter)
+      .project({ _id: 1 })
+      .allowDiskUse(true)
       //
       ;
-
-    if (plantsStatusFilter) {
-      aggregation = aggregation
-        .lookup({
-          from: 'plants-status',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'monitor'
-        })
-        .unwind('$monitor')
-        .project({
-          project: 1,
-          village: 1,
-          'monitor.status': 1,
-        })
-        .match(plantsStatusFilter);
-    }
-
-    if (plantsLocationsFilter) {
-      aggregation = aggregation
-        .lookup({
-          from: 'villages',
-          localField: 'village',
-          foreignField: '_id',
-          as: 'village'
-        })
-        .unwind('$village')
-        .project({
-          village: 1,
-        })
-        .match(plantsLocationsFilter);
-    }
-    aggregation = aggregation.project({ _id: 1 });
-    aggregation = aggregation.allowDiskUse(true);
 
     aggregation.exec()
       .then(readResult => resolve(readResult))
@@ -277,6 +259,60 @@ exports.aggregateDeliveryByCustomerCategory = (
 //
 // private part
 
+const buildFilterPlantAggregation = (plantsFilter, plantsStatusFilter, plantsLocationsFilter, autoProjection = true) => {
+  let result = Plant.aggregate()
+    // plantsFilter is always not empty
+    // at least selects enabled plants
+    .match(plantsFilter)
+    //
+    ;
+
+  if (plantsStatusFilter) {
+    result = result
+      .lookup({
+        from: 'plants-status',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'monitor'
+      })
+      .unwind('$monitor')
+      //
+      ;
+    if (autoProjection) {
+      result = result.project({
+        project: 1,
+        village: 1,
+        'monitor.status': 1,
+      });
+    }
+    if (JsonObjectHelper.isNotEmpty(plantsStatusFilter)) {
+      result = result.match(plantsStatusFilter);
+    }
+  }
+
+  if (plantsLocationsFilter) {
+    result = result
+      .lookup({
+        from: 'villages',
+        localField: 'village',
+        foreignField: '_id',
+        as: 'village'
+      })
+      .unwind('$village')
+      //
+      ;
+    if (autoProjection) {
+      result = result.project({
+        village: 1,
+      })
+    }
+    if (JsonObjectHelper.isNotEmpty(plantsLocationsFilter)) {
+      result = result.match(plantsLocationsFilter);
+    }
+  }
+
+  return result;
+}
 // const result = {
 //   ...groupingByPeriod[period]
 // };
