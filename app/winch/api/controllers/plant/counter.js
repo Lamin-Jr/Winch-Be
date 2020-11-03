@@ -71,7 +71,7 @@ exports.filterItems = (req, res, next) => {
 exports.eCustomers = (req, res, next) => {
   const plantFiltersRepo = buildPlantFiltersRepo(req.body.filter, true);
 
-  PlantCtrl.filteredDriverPlants(plantFiltersRepo.plantsFilter, plantFiltersRepo.plantsStatusFilter, plantFiltersRepo.plantsLocationsFilter)
+  PlantCtrl.filteredEDelivDriverPlants(plantFiltersRepo.plantsFilter, plantFiltersRepo.plantsStatusFilter, plantFiltersRepo.plantsLocationsFilter)
     .then(readResult => {
       if (!readResult.length) {
         WellKnownJsonRes.okSingle(res, {

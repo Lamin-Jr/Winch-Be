@@ -361,7 +361,7 @@ class ESoldBaseHandler extends Handler {
             fontSize: 9
           },
         })
-        .getBuffer(pdfBuffer => resolve(pdfBuffer))  
+        .getBuffer(pdfBuffer => resolve(pdfBuffer))
       })
     });
   }

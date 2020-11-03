@@ -8,8 +8,8 @@ class EjsTemplateEngine extends TemplateEngine {
     super();
   }
 
-  render(body, renderContext, engineContext = undefined) {
-    return require('ejs').render(body, renderContext);
+  render(body, renderContext, engineContext) {
+    return require('ejs').render(body, renderContext, engineContext);
   }
 }
 

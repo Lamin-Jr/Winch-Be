@@ -17,14 +17,14 @@ const winchDBConn = mongoose.createConnection(
 );
 
 class DriverDBConnRegistry extends EventEmitter {
-  constructor() {
+  constructor () {
     super();
     this._registry = {}
   }
 
-  add(driverCode,
-      eventHandlers,
-      connPromiseErrorHandler = (driverCode, error) => { console.error(`[DriverDBConnRegistry][${driverCode}] startup connection error => ${error}`); }) {
+  add (driverCode,
+    eventHandlers,
+    connPromiseErrorHandler = (driverCode, error) => { console.error(`[DriverDBConnRegistry][${driverCode}] startup connection error => ${error}`); }) {
     const baseDBName = `${process.env.WCH_DRV_DB_BASE_NAME}${driverCode}`;
     const connString = mongooseUtil.buildConnectionString({
       scheme: process.env.WCH_DRV_DB_SCHEME,
@@ -65,11 +65,11 @@ class DriverDBConnRegistry extends EventEmitter {
       });
   }
 
-  get(driverCode, site = undefined) {
+  get (driverCode, site = undefined) {
     const dbConnItem = this._registry[driverCode];
 
     if (!dbConnItem) {
-      console.error(`[DriverDBConnRegistry][${driverCode}] unable to retrieve connection for '${site}'`);
+      console.error(`[DriverDBConnRegistry][${driverCode}] unable to retrieve connection${!site ? '' : ` for ${site}`}`);
       return undefined
     }
 

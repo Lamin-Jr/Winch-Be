@@ -28,76 +28,13 @@ const {
 
 // cRud/eGen
 exports.e_gen = (req, res, next) => {
-  const isDailyPeriod = req.params.period === 'daily';
-  const filtersRepo = buildPlantFiltersRepo(req.body.filter, isDailyPeriod)
-
-  PlantCtrl.filteredPlantIds(filtersRepo.plantsFilter, filtersRepo.plantsStatusFilter, filtersRepo.plantsLocationsFilter)
-    .then(readResult => {
-      if (!readResult.length) {
-        WellKnownJsonRes.okMulti(res);
-        return;
-      }
-      const readingsPlantIdsOrList = [];
-      readResult.map(itemBody => itemBody._id).forEach((plantId) => {
-        const plantIdTokens = plantId.split('|');
-        readingsPlantIdsOrList.push({
-          _id: new RegExp(`^\\|${plantIdTokens[1]}\\|${plantIdTokens[2]}\\|${plantIdTokens[3]}\\|.*`)
-        });
-      });
-
-      if (readingsPlantIdsOrList.length) {
-        Object.assign(filtersRepo.targetFilter, {
-          '$or': readingsPlantIdsOrList
-        });
-      }
-
-      // perform actual aggregation
-      //
-      const schema = require(`../../../api/schemas/readings/gen-reading-${req.params.period}-log`);
-      const GenReadingOnPeriod = require('../../middleware/mongoose-db-conn').driverDBConnRegistry
-        .get('mcl')
-        .model(`GenReading${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schema);
-      aggregation = GenReadingOnPeriod.aggregate()
-        .match(filtersRepo.targetFilter)
-        .group(isDailyPeriod
-          ? {
-            _id: '$d',
-            ts: { '$first': '$ts' },
-            'batt-t-in': { '$avg': '$batt-t-in' },
-            'e-theoretical': { '$sum': '$e-theoretical' },
-            'e-delivered': { '$sum': '$e-delivered' },
-            'e-self-cons': { '$sum': '$e-self-cons' },
-            'sens-irrad': { '$avg': '$sens-irrad' },
-            'sens-t-in': { '$avg': '$sens-t-in' },
-            'sens-t-mod': { '$avg': '$sens-t-mod' },
-            'sens-t-out': { '$avg': '$sens-t-out' },
-          }
-          : {
-            _id: {
-              b: '$d',
-              e: '$dt'
-            },
-            'tsf': { $first: '$ts' },
-            'tst': { $first: '$tst' },
-            'batt-t-in': { '$avg': '$batt-t-in' },
-            'e-theoretical': { '$sum': '$e-theoretical' },
-            'e-delivered': { '$sum': '$e-delivered' },
-            'e-self-cons': { '$sum': '$e-self-cons' },
-            'sens-irrad': { '$avg': '$sens-irrad' },
-            'sens-t-in': { '$avg': '$sens-t-in' },
-            'sens-t-mod': { '$avg': '$sens-t-mod' },
-            'sens-t-out': { '$avg': '$sens-t-out' },
-          });
-
-      aggregation = aggregation.sort(JsonObjectHelper.isNotEmpty(req._q.sort)
-        ? req._q.sort
-        : { _id: 1 });
-
-      if (JsonObjectHelper.isNotEmpty(req._q.proj)) {
-        aggregation = aggregation.project(req._q.proj);
-      }
-
-      BasicRead.aggregate(req, res, next, GenReadingOnPeriod, aggregation, req._q.skip, req._q.limit);
+  exports.aggregateGen(
+    req.params.period,
+    buildPlantFiltersRepo(req.body.filter, req.params.period === 'daily'),
+    req.body.context,
+    req._q)
+    .then(aggregateResult => {
+      WellKnownJsonRes.okMulti(res, aggregateResult.readResult.length, aggregateResult.readResult, aggregateResult.context.skip, aggregateResult.context.limit);
     })
     .catch(readError => {
       WellKnownJsonRes.errorDebug(res, readError);
@@ -144,84 +81,13 @@ exports.e_deliv_cat = (req, res, next) => {
 
 // cRud/forecast
 exports.forecast = (req, res, next) => {
-  const isDailyPeriod = req.params.period === 'daily';
-  const filtersRepo = buildPlantFiltersRepo(req.body.filter, isDailyPeriod)
-
-  PlantCtrl.filteredDriverPlants(filtersRepo.plantsFilter, filtersRepo.plantsStatusFilter, filtersRepo.plantsLocationsFilter)
-    .then(readResult => {
-      if (!readResult.length) {
-        WellKnownJsonRes.okMulti(res);
-        return;
-      } else if (readResult.length !== 1) {
-        WellKnownJsonRes.notImplemented(res, 'unable to query more than one driver at once');
-        return;
-      }
-
-      // perform actual aggregation
-      //
-      // - step #1: create aggregation metadata by driver
-      Promise.all([].concat([...readResult.map(driverItem => exports.aggregateForecast(
-        driverItem._id,
-        req.params.period,
-        {
-          '_id.m': { '$in': driverItem.plants },
-          ts: filtersRepo.targetFilter.ts,
-        },
-        req.body.context,
-        req._q
-      ))]))
-        // - step #2: query for aggregation count
-        .then(promiseAllResult => Promise.all([
-          new Promise(resolve => resolve({
-            skip: req._q.skip && req._q.skip > 0 ? req._q.skip : undefined,
-            limit: req._q.limit && req._q.limit > 0 ? req._q.limit : undefined,
-            aggregationMetaList: promiseAllResult,
-          })),
-          ...promiseAllResult.map(aggregationMeta => {
-            if (!aggregationMeta || !aggregationMeta.aggregation || !aggregationMeta.model) {
-              // this is a bug
-              return new Promise((resolve, reject) => reject('invalid aggregation meta'));
-            } else {
-              return (aggregationMeta.aggregationCount ||
-                aggregationMeta.model.aggregate(aggregationMeta.aggregation.pipeline()).count('count')).exec();
-            }
-          }),
-        ]))
-        // - step #3: query for aggregation only where count is positive
-        .then(promiseAllResult => {
-          const localContext = promiseAllResult.splice(0, 1)[0];
-
-          return Promise.all([
-            new Promise(resolve => resolve({
-              skip: localContext.skip,
-              limit: localContext.limit
-            })),
-            ...promiseAllResult.map((readCountResult, index) => {
-              if (readCountResult.length === 0 || readCountResult[0].count === 0) {
-                return new Promise(resolve => resolve([]));
-              }
-
-              if (localContext.skip) {
-                aggregation = aggregation.skip(localContext.skip);
-              }
-              if (localContext.limit) {
-                aggregation = aggregation.limit(localContext.limit);
-              }
-
-              const aggregationMeta = localContext.aggregationMetaList[index];
-              return aggregationMeta.model.aggregate(aggregationMeta.aggregation.pipeline()).exec();
-            })
-          ]);
-        })
-        // - step #4: merge all aggregation results as one
-        .then(promiseAllResult => {
-          const localContext = promiseAllResult.splice(0, 1)[0];
-          const readResult = [].concat(...promiseAllResult);
-          WellKnownJsonRes.okMulti(res, readResult.length, readResult, localContext.skip, localContext.limit);
-        })
-        .catch(readError => {
-          WellKnownJsonRes.errorDebug(res, readError);
-        });
+  exports.aggregateForecast(
+    req.params.period,
+    buildPlantFiltersRepo(req.body.filter, req.params.period === 'daily'),
+    req.body.context,
+    req._q)
+    .then(aggregateResult => {
+      WellKnownJsonRes.okMulti(res, aggregateResult.readResult.length, aggregateResult.readResult, aggregateResult.context.skip, aggregateResult.context.limit);
     })
     .catch(readError => {
       WellKnownJsonRes.errorDebug(res, readError);
@@ -291,6 +157,180 @@ exports.financial = (req, res, next) => {
 //
 // utils
 
+exports.aggregateGen = (
+  period = 'daily',
+  filtersRepo,
+  context = {},
+  q = {},
+) => {
+  return new Promise((resolve, reject) => {
+    try {
+      PlantCtrl.filteredEGenDriverPlants(filtersRepo.plantsFilter, filtersRepo.plantsStatusFilter, filtersRepo.plantsLocationsFilter)
+        .then(readResult => {
+          if (!readResult.length) {
+            resolve({
+              context: {
+                skip: q.skip && q.skip > 0 ? q.skip : undefined,
+                limit: q.limit && q.limit > 0 ? q.limit : undefined,
+              },
+              readResult: [],
+            });
+            return;
+          }
+
+          // compose actual input filter
+          readResult.forEach(driverItem => {
+            driverItem.actualTargetFilter = {};
+            const readingsPlantIdsOrList = [];
+            driverItem.plants.forEach(plantId => {
+              const plantIdTokens = plantId.split('|');
+              readingsPlantIdsOrList.push({
+                _id: new RegExp(`^\\|${plantIdTokens[1]}\\|${plantIdTokens[2]}\\|${plantIdTokens[3]}\\|.*`)
+              });
+            });
+            if (filtersRepo.targetFilter.ts) {
+              driverItem.actualTargetFilter.ts = filtersRepo.targetFilter.ts
+            }
+            if (readingsPlantIdsOrList.length) {
+              driverItem.actualTargetFilter['$or'] = readingsPlantIdsOrList;
+            }
+          });
+
+          // perform actual aggregation
+          //
+          // - step #1: create aggregation metadata by driver
+          Promise.all([].concat([...readResult.map(driverItem => exports.aggregateGenByDriver(
+            driverItem._id,
+            period,
+            driverItem.actualTargetFilter,
+            context,
+            q
+          ))]))
+            // - step #2: query for aggregation count
+            .then(promiseAllResult => Promise.all([
+              new Promise(resolve => resolve({
+                skip: q.skip && q.skip > 0 ? q.skip : undefined,
+                limit: q.limit && q.limit > 0 ? q.limit : undefined,
+                aggregationMetaList: promiseAllResult,
+              })),
+              ...promiseAllResult.map(aggregationMeta => {
+                if (!aggregationMeta || !aggregationMeta.aggregation || !aggregationMeta.model) {
+                  // there is still no db connection available
+                  // -> no info available
+                  // -> return empty result
+                  return new Promise(resolve => resolve([]));
+                } else {
+                  return (aggregationMeta.aggregationCount ||
+                    aggregationMeta.model.aggregate(aggregationMeta.aggregation.pipeline()).count('count')).exec();
+                }
+              }),
+            ]))
+            // - step #3: query for aggregation only where count is positive
+            .then(promiseAllResult => {
+              const localContext = promiseAllResult.splice(0, 1)[0];
+              return Promise.all([
+                new Promise(resolve => resolve({
+                  skip: localContext.skip,
+                  limit: localContext.limit
+                })),
+                ...promiseAllResult.map((readCountResult, index) => {
+                  if (readCountResult.length === 0 || readCountResult[0].count === 0) {
+                    return new Promise(resolve => resolve([]));
+                  }
+                  const aggregationMeta = localContext.aggregationMetaList[index];
+                  return aggregationMeta.model.aggregate(aggregationMeta.aggregation.pipeline()).exec();
+                })
+              ]);
+            })
+            // - step #4: merge all aggregation results as one
+            .then(promiseAllResult => {
+              const localContext = promiseAllResult.splice(0, 1)[0];
+              let readResult = [].concat(...promiseAllResult);
+              if (localContext.skip) {
+                readResult = readResult.slice(localContext.skip);
+              }
+              if (localContext.limit) {
+                readResult = readResult.slice(0, localContext.limit);
+              }
+              resolve({
+                context: localContext,
+                readResult,
+              });
+            })
+            .catch(readError => reject(readError));
+        })
+        .catch(readError => reject(readError));
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+exports.aggregateGenByDriver = (
+  driverDbKey,
+  period = 'daily',
+  filter = {},
+  context = {},
+  q = {},
+  applyPagination = false,
+) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const dbConn = require('../../middleware/mongoose-db-conn').driverDBConnRegistry.get(driverDbKey);
+      if (!dbConn) {
+        resolve(undefined)
+      }
+      const schema = require(`../../../api/schemas/readings/gen-reading-${period}-log`);
+      const GenReadingPeriodModel = dbConn.model(`GenReading${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
+      const isDailyPeriod = period === 'daily';
+
+      let aggregation = GenReadingPeriodModel.aggregate()
+        .match(filter);
+
+      if (context.aggregator === 'plants') {
+        aggregation = aggregation.addFields(buildGenPlantIdAddFieldStage());
+      }
+
+      aggregation = aggregation
+        .group(buildGenGrouping(period, context))
+        .sort(JsonObjectHelper.isNotEmpty(q.sort)
+          ? q.sort
+          : isDailyPeriod
+            ? { ts: 1 }
+            : { tsf: 1 })
+        //
+        ;
+
+      if (JsonObjectHelper.isNotEmpty(q.proj)) {
+        aggregation = aggregation.project(q.proj);
+      }
+
+      const aggregationMeta = {
+        model: GenReadingPeriodModel,
+      };
+
+      if (applyPagination) {
+        if (q.skip && q.skip > 0) {
+          aggregation = aggregation.skip(q.skip);
+          aggregationMeta.context = aggregationMeta.context || {};
+          aggregationMeta.context.skip = q.skip;
+        }
+        if (q.limit && q.limit > 0) {
+          aggregation = aggregation.limit(q.limit);
+          aggregationMeta.context = aggregationMeta.context || {};
+          aggregationMeta.context.limit = q.limit;
+        }
+      }
+
+      aggregationMeta.aggregation = aggregation;
+
+      resolve(aggregationMeta);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
 exports.aggregateDelivery = (
   period = 'daily',
   filter = {},
@@ -327,7 +367,7 @@ exports.aggregateDelivery = (
           const MeterReadingPeriodModel = require('../../middleware/mongoose-db-conn').driverDBConnRegistry
             .get('spm')
             .model(`MeterReading${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
-          aggregation = MeterReadingPeriodModel.aggregate()
+          let aggregation = MeterReadingPeriodModel.aggregate()
             .match(filtersRepo.targetFilter)
             .group(isDailyPeriod
               ? {
@@ -535,13 +575,106 @@ exports.aggregateDeliveryByCustomerCategory = (
 };
 
 exports.aggregateForecast = (
+  period = 'daily',
+  filtersRepo,
+  context = {},
+  q = {},
+) => {
+  return new Promise((resolve, reject) => {
+    try {
+      PlantCtrl.filteredEDelivDriverPlants(filtersRepo.plantsFilter, filtersRepo.plantsStatusFilter, filtersRepo.plantsLocationsFilter)
+        .then(readResult => {
+          if (!readResult.length) {
+            resolve({
+              context: {
+                skip: q.skip && q.skip > 0 ? q.skip : undefined,
+                limit: q.limit && q.limit > 0 ? q.limit : undefined,
+              },
+              readResult: [],
+            });
+            return;
+          }
+
+          // perform actual aggregation
+          //
+          // - step #1: create aggregation metadata by driver
+          Promise.all([].concat([...readResult.map(driverItem => exports.aggregateForecastByDriver(
+            driverItem._id,
+            period,
+            {
+              '_id.m': { '$in': driverItem.plants },
+              ts: filtersRepo.targetFilter.ts,
+            },
+            context,
+            q
+          ))]))
+            // - step #2: query for aggregation count
+            .then(promiseAllResult => Promise.all([
+              new Promise(resolve => resolve({
+                skip: q.skip && q.skip > 0 ? q.skip : undefined,
+                limit: q.limit && q.limit > 0 ? q.limit : undefined,
+                aggregationMetaList: promiseAllResult,
+              })),
+              ...promiseAllResult.map(aggregationMeta => {
+                if (!aggregationMeta || !aggregationMeta.aggregation || !aggregationMeta.model) {
+                  // this is a bug
+                  return new Promise((resolve, reject) => reject('invalid aggregation meta'));
+                } else {
+                  return (aggregationMeta.aggregationCount ||
+                    aggregationMeta.model.aggregate(aggregationMeta.aggregation.pipeline()).count('count')).exec();
+                }
+              }),
+            ]))
+            // - step #3: query for aggregation only where count is positive
+            .then(promiseAllResult => {
+              const localContext = promiseAllResult.splice(0, 1)[0];
+              return Promise.all([
+                new Promise(resolve => resolve({
+                  skip: localContext.skip,
+                  limit: localContext.limit
+                })),
+                ...promiseAllResult.map((readCountResult, index) => {
+                  if (readCountResult.length === 0 || readCountResult[0].count === 0) {
+                    return new Promise(resolve => resolve([]));
+                  }
+                  const aggregationMeta = localContext.aggregationMetaList[index];
+                  return aggregationMeta.model.aggregate(aggregationMeta.aggregation.pipeline()).exec();
+                })
+              ]);
+            })
+            // - step #4: merge all aggregation results as one
+            .then(promiseAllResult => {
+              const localContext = promiseAllResult.splice(0, 1)[0];
+              let readResult = [].concat(...promiseAllResult);
+              if (localContext.skip) {
+                readResult = readResult.slice(localContext.skip);
+              }
+              if (localContext.limit) {
+                readResult = readResult.slice(0, localContext.limit);
+              }
+              resolve({
+                context: localContext,
+                readResult,
+              });
+            })
+            .catch(readError => reject(readError));
+        })
+        .catch(readError => reject(readError));
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+exports.aggregateForecastByDriver = (
   driverDbKey,
   period = 'daily',
   filter = {},
   context = {
     'exchange-rate': undefined,
   },
-  q = { sort: { _id: 1 } },
+  q = {},
+  applyPagination = false,
 ) => {
   return new Promise((resolve, reject) => {
     try {
@@ -566,10 +699,26 @@ exports.aggregateForecast = (
         aggregation = aggregation.project(q.proj);
       }
 
-      resolve({
+      const aggregationMeta = {
         model: ForecastPeriodModel,
-        aggregation
-      });
+      };
+
+      if (applyPagination) {
+        if (q.skip && q.skip > 0) {
+          aggregation = aggregation.skip(q.skip);
+          aggregationMeta.context = aggregationMeta.context || {};
+          aggregationMeta.context.skip = q.skip;
+        }
+        if (q.limit && q.limit > 0) {
+          aggregation = aggregation.limit(q.limit);
+          aggregationMeta.context = aggregationMeta.context || {};
+          aggregationMeta.context.limit = q.limit;
+        }
+      }
+
+      aggregationMeta.aggregation = aggregation;
+
+      resolve(aggregationMeta);
     } catch (error) {
       reject(error);
     }
@@ -592,6 +741,108 @@ const buildDefaultRangedGroupId = () => {
   }
 };
 
+//   - grouping / gen
+
+const buildGenGrouping = (period, context) => {
+  const aggregatorStrategy = genGroupingStrategy[context.aggregator || 'default'];
+  try {
+    return {
+      _id: aggregatorStrategy.groupId[period](),
+      ...aggregatorStrategy.accumulators[period](context),
+    };
+  } catch {
+    return undefined;
+  }
+};
+
+const buildGenSharedAccumulators = () => {
+  return {
+    'batt-t-in': { '$avg': '$batt-t-in' },
+    'e-theoretical': { '$sum': '$e-theoretical' },
+    'e-delivered': { '$sum': '$e-delivered' },
+    'e-self-cons': { '$sum': '$e-self-cons' },
+    'sens-irrad': { '$avg': '$sens-irrad' },
+    'sens-t-in': { '$avg': '$sens-t-in' },
+    'sens-t-mod': { '$avg': '$sens-t-mod' },
+    'sens-t-out': { '$avg': '$sens-t-out' },
+  };
+};
+
+const buildGenDailyAccumulators = () => {
+  const result = {
+    'ts': { $first: '$ts' },
+    ...buildGenSharedAccumulators()
+  };
+  return result;
+};
+
+const buildGenRangedAccumulators = () => {
+  const result = {
+    'tsf': { $first: '$ts' },
+    'tst': { $first: '$tst' },
+    ...buildGenSharedAccumulators()
+  };
+  return result;
+};
+
+const buildGenPlantIdAddFieldStage = () => {
+  return {
+    m: {
+      $regexFind: {
+        input: '$_id',
+        regex: /.+(?=n\d+\|)/
+      },
+    },
+  };
+};
+
+const buildGenGroupByPlantsIdPart = () => {
+  return { m: '$m.match' };
+};
+
+const buildGenRangedGroupByPlantsId = () => {
+  return {
+    ...buildDefaultRangedGroupId(),
+    ...buildGenGroupByPlantsIdPart(),
+  }
+}
+
+const genGroupingStrategy = {
+  default: {
+    groupId: {
+      daily: buildDefaultDailyGroupId,
+      weekly: buildDefaultRangedGroupId,
+      monthly: buildDefaultRangedGroupId,
+      yearly: buildDefaultRangedGroupId,
+    },
+    accumulators: {
+      daily: (context) => buildGenDailyAccumulators(context),
+      weekly: (context) => buildGenRangedAccumulators(context),
+      monthly: (context) => buildGenRangedAccumulators(context),
+      yearly: (context) => buildGenRangedAccumulators(context),
+    },
+  },
+  plants: {
+    groupId: {
+      daily: () => {
+        return {
+          d: buildDefaultDailyGroupId(),
+          ...buildGenGroupByPlantsIdPart(),
+        };
+      },
+      weekly: buildGenRangedGroupByPlantsId,
+      monthly: buildGenRangedGroupByPlantsId,
+      yearly: buildGenRangedGroupByPlantsId,
+    },
+    accumulators: {
+      daily: (context) => buildGenDailyAccumulators(context),
+      weekly: (context) => buildGenRangedAccumulators(context),
+      monthly: (context) => buildGenRangedAccumulators(context),
+      yearly: (context) => buildGenRangedAccumulators(context),
+    },
+  },
+};
+
 //   - grouping / delivery
 
 const buildDeliveryGrouping = (period, context) => {
@@ -606,12 +857,12 @@ const buildDeliveryGrouping = (period, context) => {
   }
 };
 
-const buildDeliveryDailyAccumulators = (context) => {
-  const result = {
-    'ts': { $first: '$ts' },
-    'avc': { $sum: '$avc' },
+const buildDeliverySharedAccumulators = (context) => {
+  return {
+    'av': { $avg: { $divide: [ '$avc', context.daysInPeriod * 96.0 ] } },
     'b-lccy': { $avg: '$b-lccy' },
     'b-tccy': { $avg: '$b-tccy' },
+    'cc': { $sum: 1 },
     'ct': { $addToSet: '$ct' },
     'es': { $sum: '$es' },
     'r-es-lccy': { $sum: '$r-es-lccy' },
@@ -622,6 +873,13 @@ const buildDeliveryDailyAccumulators = (context) => {
     'tx-es-lccy': { $sum: '$tx-es-lccy' },
     'tx-es-tccy': { $sum: '$tx-es-tccy' },
   };
+};
+
+const buildDeliveryDailyAccumulators = (context) => {
+  const result = {
+    'ts': { $first: '$ts' },
+    ...buildDeliverySharedAccumulators({ ...context, daysInPeriod: 1 }),
+  };
   applyDeliveryExchangeRate(result, context['exchange-rate'] /* TODO || '$tccy-er' */)
   return result;
 };
@@ -629,19 +887,9 @@ const buildDeliveryDailyAccumulators = (context) => {
 const buildDeliveryRangedAccumulators = (context) => {
   const result = {
     'tsf': { $first: '$ts' },
+    'tsfa': { $min: '$tsf' },
     'tst': { $first: '$tst' },
-    'avc': { $sum: '$avc' },
-    'b-lccy': { $avg: '$b-lccy' },
-    'b-tccy': { $avg: '$b-tccy' },
-    'ct': { $addToSet: '$ct' },
-    'es': { $sum: '$es' },
-    'r-es-lccy': { $sum: '$r-es-lccy' },
-    'r-es-tccy': { $sum: '$r-es-tccy' },
-    'r-sg-lccy': { $sum: '$r-sg-lccy' },
-    'r-sg-tccy': { $sum: '$r-sg-tccy' },
-    'tx-es-c': { $sum: '$tx-es-c' },
-    'tx-es-lccy': { $sum: '$tx-es-lccy' },
-    'tx-es-tccy': { $sum: '$tx-es-tccy' },
+    ...buildDeliverySharedAccumulators(context),
   };
   applyDeliveryExchangeRate(result, context['exchange-rate'] /* TODO || '$tccy-er' */)
   return result;
@@ -680,9 +928,9 @@ const deliveryGroupingStrategy = {
     },
     accumulators: {
       daily: (context) => buildDeliveryDailyAccumulators(context),
-      weekly: (context) => buildDeliveryRangedAccumulators(context),
-      monthly: (context) => buildDeliveryRangedAccumulators(context),
-      yearly: (context) => buildDeliveryRangedAccumulators(context),
+      weekly: (context) => buildDeliveryRangedAccumulators({ ...context, daysInPeriod: 7, }),
+      monthly: (context) => buildDeliveryRangedAccumulators({ ...context, daysInPeriod: 30.4375, }),
+      yearly: (context) => buildDeliveryRangedAccumulators({ ...context, daysInPeriod: 365.25, }),
     }
   },
   categories: {
@@ -703,9 +951,9 @@ const deliveryGroupingStrategy = {
         delete result.ct;
         return result;
       },
-      weekly: (context) => buildDeliveryRangedAccumulatorsByCategories(context),
-      monthly: (context) => buildDeliveryRangedAccumulatorsByCategories(context),
-      yearly: (context) => buildDeliveryRangedAccumulatorsByCategories(context),
+      weekly: (context) => buildDeliveryRangedAccumulatorsByCategories({ ...context, daysInPeriod: 7, }),
+      monthly: (context) => buildDeliveryRangedAccumulatorsByCategories({ ...context, daysInPeriod: 30.4375, }),
+      yearly: (context) => buildDeliveryRangedAccumulatorsByCategories({ ...context, daysInPeriod: 365.25, }),
     }
   },
 };

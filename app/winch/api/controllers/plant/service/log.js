@@ -30,71 +30,133 @@ const {
 
 // cRud/sales
 exports.sales = (req, res, next) => {
-  const isDailyPeriod = req.params.period === 'daily';
-  const filtersRepo = buildPlantFiltersRepo(req.body.filter, isDailyPeriod)
-
-  Promise.all([
-    PlantCtrl.filteredPlantIds(filtersRepo.plantsFilter, filtersRepo.plantsStatusFilter, filtersRepo.plantsLocationsFilter),
-    Plant.countDocuments().exec()
-  ])
-    .then(promiseAllResult => {
-      const readResult = promiseAllResult[0];
-
-      if (!readResult.length) {
-        WellKnownJsonRes.okMulti(res, readResult.length, [], req._q.skip, req._q.limit)
-        return;
+  exports.aggregateSales(
+    req.params.period,
+    buildPlantFiltersRepo(req.body.filter, req.params.period === 'daily'),
+    req.body.filter.classes || [],
+    req.body.context,
+    req._q)
+    .then(aggregateResult => {
+      if (aggregateResult.handledError) {
+        WellKnownJsonRes.error(res, aggregateResult.handledError.status, aggregateResult.handledError.messages)
+      } else {
+        WellKnownJsonRes.okMulti(res, aggregateResult.readResult.length, aggregateResult.readResult, aggregateResult.context.skip, aggregateResult.context.limit);
       }
-
-      const countResult = promiseAllResult[1];
-
-      if (countResult > readResult.length) {
-        const plantIdList = readResult.map(itemBody => itemBody._id);
-
-        Object.assign(filtersRepo.targetFilter, {
-          '_id.m': plantIdList == 1
-            ? plantIdList[0]
-            : { $in: plantIdList }
-        })
-      }
-
-      const saleGrouping = buildSaleGrouping(req.params.period, req.body.context || {});
-      if (!saleGrouping) {
-        WellKnownJsonRes.error(res, 400, [`unsupported aggregator: '${req.body.context.aggregator}'`]);
-        return;
-      }
-
-      // perform actual aggregation
-      //
-      const schema = require(`../../../../api/schemas/readings/service-sale-${req.params.period}-log`);
-      const ServiceSaleOnPeriod = require('../../../middleware/mongoose-db-conn')
-        .winchDBConn
-        .model(`ServiceSale${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schema);
-      let aggregation = ServiceSaleOnPeriod.aggregate();
-
-      if (JsonObjectHelper.isNotEmpty(filtersRepo.targetFilter)) {
-        aggregation = aggregation.match(filtersRepo.targetFilter);
-      }
-
-      aggregation = aggregation
-        .group(saleGrouping)
-        .sort(JsonObjectHelper.isNotEmpty(req._q.sort)
-          ? req._q.sort
-          : { _id: 1 })
-        //
-        ;
-
-      if (JsonObjectHelper.isNotEmpty(req._q.proj)) {
-        aggregation = aggregation.project(req._q.proj);
-      }
-
-      BasicRead.aggregate(req, res, next, ServiceSaleOnPeriod, aggregation, req._q.skip, req._q.limit);
     })
-    .catch(readError => WellKnownJsonRes.errorDebug(res, readError));
+    .catch(readError => {
+      WellKnownJsonRes.errorDebug(res, readError);
+    });
 };
 
 
 //
 // private part
+
+exports.aggregateSales = (
+  period = 'daily',
+  filtersRepo,
+  classes = [],
+  context = {},
+  q = {},
+) => {
+  return new Promise((resolve, reject) => {
+    try {
+      Promise.all([
+        PlantCtrl.filteredPlantIds(filtersRepo.plantsFilter, filtersRepo.plantsStatusFilter, filtersRepo.plantsLocationsFilter),
+        Plant.countDocuments().exec()
+      ])
+        .then(promiseAllResult => {
+          const readResult = promiseAllResult[0];
+
+          if (!readResult.length) {
+            resolve({
+              context: {
+                skip: q.skip && q.skip > 0 ? q.skip : undefined,
+                limit: q.limit && q.limit > 0 ? q.limit : undefined,
+              },
+              readResult: [],
+            });
+            return;
+          }
+
+          const countResult = promiseAllResult[1];
+
+          if (countResult > readResult.length) {
+            const plantIdList = readResult.map(itemBody => itemBody._id);
+
+            filtersRepo.targetFilter['_id.m'] = plantIdList == 1
+              ? plantIdList[0]
+              : { $in: plantIdList }
+          }
+
+          if (classes.length) {
+            filtersRepo.targetFilter['_id.t'] = classes == 1
+              ? classes[0]
+              : { $in: classes };
+          }
+
+          const saleGrouping = buildSaleGrouping(period, context || {});
+          if (!saleGrouping) {
+            resolve({
+              handledError: {
+                status: 400,
+                messages: [`unsupported aggregator: '${context.aggregator}'`],
+              }
+            })
+            return;
+          }
+
+          // perform actual aggregation
+          //
+          const schema = require(`../../../../api/schemas/readings/service-sale-${period}-log`);
+          const ServiceSalePeriodModel = require('../../../middleware/mongoose-db-conn')
+            .winchDBConn
+            .model(`ServiceSale${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
+          let aggregation = ServiceSalePeriodModel.aggregate();
+
+          if (JsonObjectHelper.isNotEmpty(filtersRepo.targetFilter)) {
+            aggregation = aggregation.match(filtersRepo.targetFilter);
+          }
+
+          aggregation = aggregation
+            .group(saleGrouping)
+            .sort(JsonObjectHelper.isNotEmpty(q.sort)
+              ? q.sort
+              : { _id: 1 })
+            //
+            ;
+
+          if (JsonObjectHelper.isNotEmpty(q.proj)) {
+            aggregation = aggregation.project(q.proj);
+          }
+
+          const localContext = {
+            skip: q.skip && q.skip > 0 ? q.skip : undefined,
+            limit: q.limit && q.limit > 0 ? q.limit : undefined,
+          };
+
+          if (localContext.skip) {
+            aggregation = aggregation.skip(localContext.skip);
+          }
+          if (localContext.limit) {
+            aggregation = aggregation.limit(localContext.limit);
+          }
+
+          aggregation.exec()
+            .then(readResult => {
+              resolve({
+                context: localContext,
+                readResult,
+              });
+            })
+            .catch(readError => reject(readError));
+        })
+        .catch(readError => reject(readError));
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 
 const buildSaleGrouping = (period, context) => {
   const aggregatorStrategy = saleGroupingStrategy[context.aggregator || 'default'];

@@ -24,12 +24,13 @@ const {
 //
 // endpoint-related
 
-// cRud/basic
+// cRud/list
 exports.list = (req, res, next) => {
   const plantFilters = buildPlantFilters(req.body.filter);
 
   const project = {
     name: 1,
+    dates: 1,
     project: 1,
     geo: 1,
     village: 1,

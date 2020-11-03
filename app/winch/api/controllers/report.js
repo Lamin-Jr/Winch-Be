@@ -3,14 +3,14 @@ const mongoose = require('mongoose');
 const Report = require('../models/report');
 
 // const { 
-  // JsonObjectTypes,
-  // JsonObjectHelper, 
+// JsonObjectTypes,
+// JsonObjectHelper, 
 // } = require('../../../../api/lib/util/json-util');
 const {
   WellKnownJsonRes,
   // JsonResWriter,
 } = require('../../../../api/middleware/json-response-util');
-const { 
+const {
   BasicRead,
   // BasicWrite,
 } = require('../../../../api/middleware/crud');
@@ -50,22 +50,25 @@ exports.notify_by_id = (req, res, next) => {
         return;
       }
       if (!readResult.handler || !readResult.handler.name) {
-        WellKnownJsonRes.error(res, 500, [ 'invalid template recipe' ]);
+        WellKnownJsonRes.error(res, 500, ['invalid template recipe']);
         return;
       }
       readResult.handler.params = {
+        // merge request body first
+        ...(req.body || {}),
+        // override request body with value from db
         ...(readResult.handler.params || {}),
         notifications: [...(readResult['notifications'] || [])],
       }
       const reportRecipeHandlersRegistry = require('../middleware/report-recipe-handlers-registry');
       reportRecipeHandlersRegistry
-      .handle(readResult.handler.name, readResult.handler.params)
-      .then(() => {
-        WellKnownJsonRes.created(res);
-      })
-      .catch(handleError => {
-        WellKnownJsonRes.errorDebug(res, handleError);
-      });
+        .handle(readResult.handler.name, readResult.handler.params)
+        .then(() => {
+          WellKnownJsonRes.created(res);
+        })
+        .catch(handleError => {
+          WellKnownJsonRes.errorDebug(res, handleError);
+        });
     })
     .catch((readError) => {
       WellKnownJsonRes.errorDebug(res, readError);

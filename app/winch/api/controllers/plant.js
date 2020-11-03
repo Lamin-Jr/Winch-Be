@@ -123,9 +123,13 @@ exports.plantExistsById = plantId => {
 };
 
 // cRud/filteredPlants
-exports.filteredPlants = (plantsFilter, plantsStatusFilter, plantsLocationsFilter, projection) => {
+exports.filteredPlants = (plantsFilter, plantsStatusFilter, plantsLocationsFilter, projection, sort) => {
   return new Promise((resolve, reject) => {
     let aggregation = buildFilterPlantAggregation(plantsFilter, plantsStatusFilter, plantsLocationsFilter, false)
+
+    if (JsonObjectHelper.isNotEmpty(sort)) {
+      aggregation = aggregation.sort(sort);
+    }
 
     if (JsonObjectHelper.isNotEmpty(projection)) {
       aggregation = aggregation.project(projection);
@@ -154,8 +158,64 @@ exports.filteredPlantIds = (plantsFilter, plantsStatusFilter, plantsLocationsFil
   })
 };
 
-// cRud/filteredDriverPlants
-exports.filteredDriverPlants = (plantsFilter, plantsStatusFilter, plantsLocationsFilter) => {
+// cRud/filteredEGenDriverPlants
+exports.filteredEGenDriverPlants = (plantsFilter, plantsStatusFilter, plantsLocationsFilter) => {
+  return new Promise((resolve, reject) => {
+    let aggregation = Plant.aggregate()
+      .match(plantsFilter)
+      //
+      ;
+
+    if (plantsStatusFilter) {
+      aggregation = aggregation
+        .lookup({
+          from: 'plants-status',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'monitor'
+        })
+        .unwind('$monitor')
+        .match(plantsStatusFilter);
+    }
+
+    if (plantsLocationsFilter) {
+      aggregation = aggregation
+        .lookup({
+          from: 'villages',
+          localField: 'village',
+          foreignField: '_id',
+          as: 'village'
+        })
+        .unwind('$village')
+        .match(plantsLocationsFilter);
+    }
+
+    aggregation = aggregation
+      .lookup({
+        from: 'plants-drivers',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'driver'
+      })
+      .unwind('$driver')
+      .unwind('$driver.e-gen')
+      .group({
+        _id: '$driver.e-gen',
+        plants: { $addToSet: '$_id' }
+      })
+      //
+      ;
+
+    aggregation = aggregation.allowDiskUse(true);
+
+    aggregation.exec()
+      .then(readResult => resolve(readResult))
+      .catch(error => reject(error))
+  });
+};
+
+// cRud/filteredEDelivDriverPlants
+exports.filteredEDelivDriverPlants = (plantsFilter, plantsStatusFilter, plantsLocationsFilter) => {
   return new Promise((resolve, reject) => {
     let aggregation = Plant.aggregate()
       .match(plantsFilter)
@@ -206,7 +266,7 @@ exports.filteredDriverPlants = (plantsFilter, plantsStatusFilter, plantsLocation
     aggregation.exec()
       .then(readResult => resolve(readResult))
       .catch(error => reject(error))
-  })
+  });
 };
 
 // other/generatePlantId

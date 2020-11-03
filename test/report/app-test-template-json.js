@@ -1,12 +1,15 @@
+const placeholderBegin = '{{'
+const placeholderEnd = '}}'
+
 const jsonTemplate = {
   array: [
     {
       type: 'foo',
-      config: '${config}',
+      config: `${placeholderBegin}config${placeholderEnd}`,
     },
     {
       type: 'bar',
-      arrConfig: '${arrConfig}',
+      arrConfig: `${placeholderBegin}arrConfig${placeholderEnd}`,
     },
   ],
 };
@@ -58,8 +61,8 @@ const expectedResult = {
 };
 
 const stringifyReplacer = (key, val) => {
-  if (typeof val === 'string' && val.match(/^\${(.+)}$/)) {
-    return jsonTemplateContext[val.replace(/[(\${)|}]/g, '')]
+  if (typeof val === 'string' && val.startsWith(placeholderBegin) && val.endsWith(placeholderEnd)) {
+    return jsonTemplateContext[val.slice(placeholderBegin.length, -placeholderEnd.length)]
   }
   return val;
 }
