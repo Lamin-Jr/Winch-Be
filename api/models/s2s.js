@@ -3,13 +3,8 @@ const mongoose = require('mongoose');
 const s2sSchema = mongoose.Schema({
   _id: String,
   'expires-at': Date,
-  'app-names': {
-    type: Array,
-    items: {
-      type: String
-    },
-    default: undefined,
-  }
+  'app-name': String,
+  'sign-key-ref': String,
 }, {
   collection: 's2s',
   strict: false,

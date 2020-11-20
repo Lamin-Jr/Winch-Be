@@ -11,28 +11,24 @@ const mongooseMixins = require('../middleware/mongoose-mixins');
 //
 // utils
 
-// cRud/exists
-exports.apiTokenExists = (token, logic = true, appName = undefined) => {
+// cRud/getByApiToken
+exports.getByApiToken = (token) => {
+  return S2S.findOne({ _id: token, }).exec();
+}
+
+// cRud/apiTokenExists
+exports.apiTokenExists = (token, logic = true) => {
   return new Promise((resolve, reject) => {
-    const countQuery = appName
-      ? {
-          _id: token,
-          'app-names': { $eq: appName },
-        }
-      : {
-          _id: token,
-          'app-names': { $exists: false }
-        };
-    S2S.countDocuments(countQuery)
+    S2S.countDocuments({ _id: token, })
       .exec()
       .then((countResult) => {
         countResult === 0
           ? logic
-            ? reject(new Error(`api token '${token}' does not exist`))
-            : resolve()
+            ? resolve(false)
+            : resolve(true)
           : logic
-          ? resolve()
-          : reject(new Error(`api token '${token}' already exists`));
+            ? resolve(true)
+            : resolve(false);
       })
       .catch((countError) => {
         reject(countError);
@@ -41,24 +37,48 @@ exports.apiTokenExists = (token, logic = true, appName = undefined) => {
 };
 
 // Crud/activateApiToken
-exports.activateApiToken = (token, expiresAt = undefined, appNames = undefined) => {
+exports.activateApiToken = (token, options = {}) => {
   return new Promise((resolve, reject) => {
-    this.apiTokenExists(token, false)
-      .then(() => {
-        return new Promise((resolve /*, reject*/) => {
-          const newToken = { _id: token };
-          if (expiresAt) {
-            newToken['expires-at'] = expiresAt;
-          }
-          if (appNames && appNames.length) {
-            newToken['app-names'] = appNames;
-          }
-          resolve(newToken);
-        });
-      })
-      .then((newToken) => resolve(S2S.create(newToken)))
-      .catch((activationError) => {
-        reject(activationError);
+    const newToken = { _id: token };
+    if (options.expiresAt) {
+      newToken['expires-at'] = options.expiresAt;
+    }
+    if (options.appName && options.appName.length) {
+      newToken['app-name'] = options.appName;
+    }
+    if (options.signKeyRef) {
+      newToken['sign-key-ref'] = options.signKeyRef;
+    }
+
+    S2S.create(newToken)
+      .then(createResult => resolve({
+        created: true,
+        createResult,
+      }))
+      .catch(createError => {
+        createError.name === 'MongoError' && createError.code === 11000
+          ? resolve({
+            exists: true,
+          })
+          : reject(createError);
       });
   });
 };
+
+// cRud/checkTotalActivations
+exports.checkTotalActivations = (expectedCount) => {
+  return new Promise((resolve, reject) => {
+    S2S.countDocuments().exec()
+      .then(countResult => {
+        const result = countResult === expectedCount;
+        resolve({
+          ok: result,
+          expected: result ? undefined : expectedCount,
+          total: result ? undefined : countResult,
+        })
+      })
+      .catch(checkError => reject(checkError));
+  });
+}
+
+exports.buildSignKeyRef = (target) => `S2S_${target.toUpperCase()}_SIGN_KEY`;

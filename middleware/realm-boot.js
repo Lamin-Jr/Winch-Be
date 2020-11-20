@@ -53,15 +53,64 @@ exports.boot = () => {
       console.error(`unable to check ${filterCheck.role}@${filterCheck['app-name']}: ${countError}`);
     });
 
+  let s2sSetupPromises = [];
+
   //
-  // OrangeSL API token
-  const orangeSlApiToken = 'fec89532-76ff-4896-9e6f-6aabdd57555c'
-  S2SCtrl.activateApiToken(orangeSlApiToken)
-  .then((createResult) => { 
-    console.log(`API Token ${orangeSlApiToken} activated`)
-  })
-  .catch(activationError => {
-    console.error(`unable to create API Token ${orangeSlApiToken} -> ${activationError}`);
-  });
+  // OrangeSL
+  {
+    const target = 'OrangeSL';
+    if (process.env.S2S_ORANGE_SL_API_KEY) {
+      s2sSetupPromises.push({
+        target,
+        promise: S2SCtrl.activateApiToken(process.env.S2S_ORANGE_SL_API_KEY)
+      });
+    }
+    else {
+      console.error(`wrong S2S credentials setup for ${target}, fix it!`);
+    }
+  }
+
+  //
+  // Winch SL controller
+  {
+    const target = 'Winch SL controller';
+    const signKeyRef = 'WCH_SL_CTRL';
+    if (process.env.S2S_WCH_SL_CTRL_API_KEY
+      && process.env.S2S_WCH_SL_CTRL_API_APP
+      && process.env[S2SCtrl.buildSignKeyRef(signKeyRef)]) {
+      s2sSetupPromises.push({
+        target,
+        promise: S2SCtrl.activateApiToken(process.env.S2S_WCH_SL_CTRL_API_KEY, {
+          appName: process.env.S2S_WCH_SL_CTRL_API_APP,
+          signKeyRef,
+        })
+      });
+    }
+    else {
+      console.error(`wrong S2S credentials setup for ${target}, fix it!`);
+    }
+  }
+
+  Promise.all(s2sSetupPromises.map(item => item.promise))
+    .then(promiseAllResult => {
+      promiseAllResult.forEach((activationResult, index) => {
+        if (activationResult.exists) {
+          console.warn(`S2S credentials for ${s2sSetupPromises[index].target} already activated, check compliance`);
+        } else {
+          console.log(`S2S credentials for ${s2sSetupPromises[index].target} activated`);
+        }
+      })
+
+      S2SCtrl.checkTotalActivations(s2sSetupPromises.length)
+        .then(checkResult => checkResult.ok
+          ? console.log(`total ${s2sSetupPromises.length} S2S credentials activated`)
+          : console.error(`found ${checkResult.total} rather than ${checkResult.expected} S2S credentials expected, fix it`))
+        .catch(checkError => {
+          console.error(`unable check total S2S credentials activation -> ${checkError}`);
+        });
+    })
+    .catch(activationsError => {
+      console.error(`unable to complete S2S credentials setup -> ${activationsError}`);
+    });
 
 };

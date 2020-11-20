@@ -139,10 +139,10 @@ exports.financial = (req, res, next) => {
 
   const mongooseDbConn = require('../../middleware/mongoose-db-conn');
   const driverDbKey = req.body.filter['driver'];
-  const schemaFinancialPerformanceOnPeriod = require(`../../schemas/kpi/forecast-${req.params.period}`);
+  const schemaFinancialPerformanceOnPeriod = require(`../../schemas/kpi/financial-forecast-${req.params.period}`);
   const FinancialPerformanceOnPeriod = mongooseDbConn.driverDBConnRegistry
     .get(driverDbKey)
-    .model(`Forecast${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schemaFinancialPerformanceOnPeriod);
+    .model(`FinancialForecast${req.params.period.charAt(0).toUpperCase() + req.params.period.slice(1)}`, schemaFinancialPerformanceOnPeriod);
 
   if (JsonObjectHelper.isEmpty(req._q.sort)) {
     req._q.sort = {

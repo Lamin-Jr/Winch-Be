@@ -74,6 +74,10 @@ function getPlantServicesByPlant () {
       buildPlantService(buildPlantServiceId(plantId, 'inet-wifi'), buildHeadGroup('Wi-Fi voucher')),
     ],
     // -> Sierra Leone
+    // --> |WP1|SLL_2019_001|69| -> Bafodia
+    '|WP1|SLL_2019_001|69|': (plantId) => [
+      buildPlantService(buildPlantServiceId(plantId, 'rent-batt'), buildHeadGroup('Battery rental'), buildDatesGroup(new Date('2020-11-06'), new Date('2020-10-20')), 'mopo'),
+    ],
     // --> |WP1|SLL_2019_001|55| -> Sinkunia
     '|WP1|SLL_2019_001|55|': (plantId) => [
       buildPlantService(buildPlantServiceId(plantId, 'rent-batt'), buildHeadGroup('Battery rental'), buildDatesGroup(new Date('2020-06-11'), new Date('2020-06-10')), 'mopo'),

@@ -24,10 +24,7 @@ const mongooseMixins = require('../../../../../api/middleware/mongoose-mixins');
 
 // cRud/userStatus
 exports.user_status = (req, res, next) => {
-  // WellKnownJsonRes.notImplemented(res);
-  // return;
-
-  if (req.query['debug_sim_fail'] === 'true') {
+  if (req.query['debug_simulateFailure'] === 'true') {
     WellKnownJsonRes.error(res, 500, [ 'service failure: unable to read user status', ]);
     return;
   }

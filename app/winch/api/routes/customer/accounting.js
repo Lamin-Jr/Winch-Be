@@ -1,77 +1,85 @@
 const express = require('express');
 const router = express.Router();
 
+const jwt = require('jsonwebtoken');
+
 const CustomerAccountingCtrl = require('../../controllers/customer/accounting');
 
 const S2SCtrl = require('../../../../../api/controllers/s2s');
-
-const checkAuth = require('../../../../../api/middleware/check-auth');
-const retrieveUserProfile = require('../../../../../api/middleware/retrieve-user-profile');
-
-const setAppName = require('../../middleware/rest/set-app-name');
 
 const {
   WellKnownJsonRes
   // JsonResWriter,
 } = require('../../../../../api/middleware/json-response-util');
 
-const {
-  json,
-  text,
-} = require('../../../../../api/middleware/check-accept-header');
 
 const checkApiToken = (req, res, next) => {
-  const apiTokenChecks = []
-  // POST form body
-  if (req.body['api-token']) {
-    apiTokenChecks.push(S2SCtrl.apiTokenExists(req.body['api-token']/* TODO , true, req.userData['app-name'] */))
-  }
+  const apiTokenChecks = [];
   // POST json body
-  if (req.body['apiToken']) {
-    apiTokenChecks.push(S2SCtrl.apiTokenExists(req.body['apiToken']/* TODO , true, req.userData['app-name'] */))
+  if (req.is('application/json') && req.body['apiKey']) {
+    req.userData = {
+      'api-token': req.body['apiKey'],
+    }
+    apiTokenChecks.push(S2SCtrl.apiTokenExists(req.body['apiKey']))
   }
-  // GET query param
-  if (req.query['api_token']) {
-    apiTokenChecks.push(S2SCtrl.apiTokenExists(req.query['api_token']/* TODO , true, req.userData['app-name'] */))
+  // POST form body
+  if (req.is('application/x-www-form-urlencoded') && req.body['api_key']) {
+    req.userData = {
+      'api-token': req.body['api_key'],
+    }
+    apiTokenChecks.push(S2SCtrl.apiTokenExists(req.body['api_key']));
   }
-  // GET header
-  if (req.headers['x-winch-esell-api-token']) {
-    apiTokenChecks.push(S2SCtrl.apiTokenExists(req.headers['x-winch-esell-api-token']/* TODO , true, req.userData['app-name'] */))
-  }
-  if (!apiTokenChecks.length) {
+  if (apiTokenChecks.length !== 1) {
     WellKnownJsonRes.unauthorized(res);
     return;
   }
-  Promise.all(apiTokenChecks)
-    .then((outcomes) => {
-      req.userData = {}
-      next()
+  apiTokenChecks[0]
+    .then(apiTokenCheckResult => {
+      if (apiTokenCheckResult === false) {
+        WellKnownJsonRes.unauthorized(res);
+        return;
+      }
+      S2SCtrl.getByApiToken(req.userData['api-token'])
+        .then(s2sCredential => {
+          req.userData['app-name'] = s2sCredential['app-name'];
+          req.userData['sign-key-ref'] = s2sCredential['sign-key-ref'];
+          next();
+        })
+        .catch(apiTokenReadError => {
+          WellKnownJsonRes.error(res, 500, ['unable to retrieve credentials']);
+        })
     })
-    .catch((apiTokenChecksError) => {
+    .catch(apiTokenChecksError => {
       WellKnownJsonRes.unauthorized(res);
     })
 };
 
+const decodeRequest = (req, res, next) => {
+  try {
+    req.userData['decoded-req'] = jwt.verify(req.body.req, process.env[S2SCtrl.buildSignKeyRef(req.userData['sign-key-ref'])]);
+    next();
+  } catch (error) {
+    WellKnownJsonRes.error(res, 400, ['invalid request']);
+  }
+}
 
-//
-// public
-router.post('/subscriptions', checkAuth, setAppName, retrieveUserProfile, CustomerAccountingCtrl.subscribe);
+const dispatchRequest = (req, res, next) => {
+  const opMapping = {
+    status: 'user_status',
+  }
+  req.userData['ctrl-method-ref'] = opMapping[req.userData['decoded-req'].op]
 
-// TODO decide if useful
-// router.post('/subscriptions/channels', checkAuth, setAppName, retrieveUserProfile, CustomerAccountingCtrl.add_channel_to_subscription);
-// router.delete('/subscriptions/channels', checkAuth, setAppName, retrieveUserProfile, CustomerAccountingCtrl.remove_channel_from_subscription);
+  if (!CustomerAccountingCtrl[req.userData['ctrl-method-ref']]) {
+    WellKnownJsonRes.error(res, 400, ['invalid request']);
+    return;
+  }
 
-// TODO decide if useful
-// router.post('/subscriptions/messages/status', checkAuth, setAppName, retrieveUserProfile, CustomerAccountingCtrl.send_subscription_status);
-
+  CustomerAccountingCtrl[req.userData['ctrl-method-ref']](req, res, next);
+}
 
 //
 // dedicated-api-token-protected
-router.get('/', checkApiToken, setAppName, CustomerAccountingCtrl.user_status);
-
-router.post('/credit', text, checkApiToken, setAppName, CustomerAccountingCtrl.top_up_by_form);
-
-router.post('/credit', json, checkApiToken, setAppName, CustomerAccountingCtrl.top_up_by_rest);
+router.post('/', checkApiToken, decodeRequest, dispatchRequest);
 
 
 module.exports = router;
