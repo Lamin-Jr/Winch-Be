@@ -91,7 +91,7 @@ function getPlantBuilders () {
     'Nimjat': (villageId) => {
       return [
         buildPlant(systemCreator, 'Nimjat RPU001', 'Mauritania DBO', 'MAU_2019_008', 'MAU', 17.404711, -15.691929, villageId, undefined, undefined, 16.74, 74.16, 0.00, buildOrganization(), 19),
-        buildPlant(systemCreator, 'Nimjat RPU002', 'Mauritania DBO', 'MAU_2019_008', 'MAU', 17.406925, -15.691758, villageId, undefined, undefined, 30.24, 148.32, 0.00, buildOrganization(), 71)
+        buildPlant(systemCreator, 'Nimjat RPU002', 'Mauritania DBO', 'MAU_2019_008', 'MAU', 17.406925, -15.691758, villageId, undefined, undefined, 30.24, 148.32, 0.00, buildOrganization(), 72)
       ];
     },
     // -> São Tomé e Príncipe
@@ -101,19 +101,71 @@ function getPlantBuilders () {
       ];
     },
     // -> Sierra Leone
-    'Alikalia': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Alikalia', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.151992, -11.388275, villageId, undefined, undefined, 103.50, 444.86, 0.00, buildOrganization(), 0, 0, 0, 394)
-      ];
-    },
+    // -> Sierra Leone / WP1
     'Bafodia': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Bafodia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.684119, -11.731742, villageId, new Date('2019-05-31'), new Date('2020-05-02'), 36.54, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Kabala Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 167, 1, 1, 20)
+        buildPlant(systemCreator, 'Bafodia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.684119, -11.731742, villageId, new Date('2019-05-31'), new Date('2020-05-02'), 36.54, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Kabala Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 168, 1, 1, 20)
       ];
     },
     'Batkanu': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Batkanu', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.073461, -12.41555, villageId, new Date('2019-05-31'), new Date('2019-11-20'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Batkanu Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 79, 1, 3, 20)
+        buildPlant(systemCreator, 'Batkanu', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.073461, -12.41555, villageId, new Date('2019-05-31'), new Date('2019-11-20'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Batkanu Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 80, 1, 3, 20)
+      ];
+    },
+    'Fintonia': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Fintonia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.672972, -12.225753, villageId, new Date('2019-05-31'), new Date('2019-12-17'), 26.46, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Hospital Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 83, 1, 0, 20)
+      ];
+    },
+    'Kagbere': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Kagbere', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.220358, -12.140444, villageId, new Date('2019-05-31'), new Date('2019-12-06'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Kagbere Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 53, 1, 3, 20)
+      ];
+    },
+    'Kamaranka': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Kamaranka', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.297661, -12.206139, villageId, new Date('2019-05-31'), new Date('2019-11-29'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Fullah Town Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 83, 1, 3, 20)
+      ];
+    },
+    'Kathantha Yimboi': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Kathantha Yimboi', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.545878, -12.170625, villageId, new Date('2019-05-31'), new Date('2019-12-23'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('', buildCustomerContacts(['+232075057055', '+232033570611']))), 62, 1, 0, 20)
+      ];
+    },
+    'Mabang': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Mabang', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 8.567592, -12.173, villageId, new Date('2019-05-31'), new Date('2019-10-09'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Mabang Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 43, 1, 0, 0)
+      ];
+    },
+    'Mara': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Mara', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 8.662931, -12.245683, villageId, new Date('2019-05-31'), new Date('2019-09-30'), 26.46, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Mara Town', buildCustomerContacts(['+232075057055', '+232033570611']))), 108, 1, 3, 10)
+      ];
+    },
+    'Musaia': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Musaia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.755061, -11.570375, villageId, new Date('2019-05-31'), new Date('2020-02-28'), 26.46, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('', buildCustomerContacts(['+232075057055', '+232033570611']))), 121, 1, 2, 20)
+      ];
+    },
+    'Rokonta': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Rokonta', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 8.746544, -12.049283, villageId, new Date('2019-05-31'), new Date('2019-09-16'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Middle of Rokonta', buildCustomerContacts(['+232075057055', '+232033570611']))), 87, 1, 1, 23)
+      ];
+    },
+    'Sinkunia': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Sinkunia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.860631, -11.430731, villageId, new Date('2019-05-31'), new Date('2020-02-14'), 36.54, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Bindi Falaba Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 174, 1, 0, 20)
+      ];
+    },
+    'Yiffin': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Yiffin', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.123019, -11.269533, villageId, new Date('2019-05-31'), new Date('2020-06-24'), 36.54, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Central Town', buildCustomerContacts(['+232075057055', '+232033570611']))), 204, 1, 1, 20)
+      ];
+    },
+    // -> Sierra Leone / WP2
+    'Alikalia': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Alikalia', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.151992, -11.388275, villageId, undefined, undefined, 103.50, 444.86, 0.00, buildOrganization(), 0, 0, 0, 394)
       ];
     },
     'Bendugu Mongo': (villageId) => {
@@ -136,11 +188,6 @@ function getPlantBuilders () {
         buildPlant(systemCreator, 'Falaba', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.854305, -11.320968, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 260)
       ];
     },
-    'Fintonia': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Fintonia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.672972, -12.225753, villageId, new Date('2019-05-31'), new Date('2019-12-17'), 26.46, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Hospital Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 80, 1, 0, 20)
-      ];
-    },
     'Firawa': (villageId) => {
       return [
         buildPlant(systemCreator, 'Firawa', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.358892, -11.30088, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 268)
@@ -151,34 +198,9 @@ function getPlantBuilders () {
         buildPlant(systemCreator, 'Gbendembu', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.108262, -12.20772, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 261)
       ];
     },
-    'Kagbere': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Kagbere', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.220358, -12.140444, villageId, new Date('2019-05-31'), new Date('2019-12-06'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Kagbere Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 53, 1, 3, 20)
-      ];
-    },
-    'Kamaranka': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Kamaranka', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.297661, -12.206139, villageId, new Date('2019-05-31'), new Date('2019-11-29'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Fullah Town Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 83, 1, 3, 20)
-      ];
-    },
-    'Kathantha Yimboi': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Kathantha Yimboi', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.545878, -12.170625, villageId, new Date('2019-05-31'), new Date('2019-12-23'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('', buildCustomerContacts(['+232075057055', '+232033570611']))), 62, 1, 0, 20)
-      ];
-    },
     'Kondembaia': (villageId) => {
       return [
         buildPlant(systemCreator, 'Kondembaia', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.382413, -11.567958, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 212)
-      ];
-    },
-    'Mabang': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Mabang', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 8.567592, -12.173, villageId, new Date('2019-05-31'), new Date('2019-10-09'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Mabang Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 43, 1, 0, 0)
-      ];
-    },
-    'Mara': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Mara', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 8.662931, -12.245683, villageId, new Date('2019-05-31'), new Date('2019-09-30'), 26.46, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Mara Town', buildCustomerContacts(['+232075057055', '+232033570611']))), 108, 1, 3, 10)
       ];
     },
     'Masumbri': (villageId) => {
@@ -191,16 +213,6 @@ function getPlantBuilders () {
         buildPlant(systemCreator, 'Mathoir', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 8.484747, -12.417392, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 250)
       ];
     },
-    'Musaia': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Musaia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.755061, -11.570375, villageId, new Date('2019-05-31'), new Date('2020-02-28'), 26.46, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('', buildCustomerContacts(['+232075057055', '+232033570611']))), 121, 1, 2, 20)
-      ];
-    },
-    'Rokonta': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Rokonta', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 8.746544, -12.049283, villageId, new Date('2019-05-31'), new Date('2019-09-16'), 16.38, 77.76, 0.00, buildOrganization(buildOrganizationBasicInfo('Middle of Rokonta', buildCustomerContacts(['+232075057055', '+232033570611']))), 85, 1, 1, 23)
-      ];
-    },
     'Sambia Bendugu': (villageId) => {
       return [
         buildPlant(systemCreator, 'Sambia Bendugu', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.062537, -11.488232, villageId, undefined, undefined, 103.50, 444.86, 0.00, buildOrganization(), 0, 0, 0, 427)
@@ -209,16 +221,6 @@ function getPlantBuilders () {
     'Seria': (villageId) => {
       return [
         buildPlant(systemCreator, 'Seria', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.46446, -10.923058, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 230)
-      ];
-    },
-    'Sinkunia': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Sinkunia', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.860631, -11.430731, villageId, new Date('2019-05-31'), new Date('2020-02-14'), 36.54, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Bindi Falaba Road', buildCustomerContacts(['+232075057055', '+232033570611']))), 173, 1, 0, 20)
-      ];
-    },
-    'Yiffin': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Yiffin', 'Sierra Leone Unops WP1', 'SLL_2019_001', 'WP1', 9.123019, -11.269533, villageId, new Date('2019-05-31'), new Date('2020-06-24'), 36.54, 155.52, 0.00, buildOrganization(buildOrganizationBasicInfo('Central Town', buildCustomerContacts(['+232075057055', '+232033570611']))), 204, 1, 1, 20)
       ];
     },
     // -> Togo
