@@ -45,6 +45,10 @@ class SummaryBaseHandler extends Handler {
         tsFrom: DateFormatter.formatDateOrDefault(new Date(new Date(endDateRef).setDate(endDateRef.getDate() - 31)), dateFormatter),
         tsTo: context.period.to,
       };
+      context.period.dailyClusters = {
+        tsFrom: DateFormatter.formatDateOrDefault(new Date(new Date(endDateRef).setDate(endDateRef.getDate() - 15)), dateFormatter),
+        tsTo: context.period.to,
+      };
       const sharedDelivCatReqContext = {
         aggregator: 'categories',
       };
@@ -58,6 +62,7 @@ class SummaryBaseHandler extends Handler {
       const PlantServiceLogCtrl = require('../../../../../app/winch/api/controllers/plant/service/log');
       const plantFilters = buildPlantFilters(context.filter);
       Promise.all([
+        // 0) del.1
         PlantLogCtrl.aggregateDeliveryByCustomerCategory(
           'yearly',
           {
@@ -65,6 +70,7 @@ class SummaryBaseHandler extends Handler {
             ...context.period.yearly,
           },
           sharedDelivCatReqContext),
+        // 1) del.2
         PlantLogCtrl.aggregateDeliveryByCustomerCategory(
           'monthly',
           {
@@ -72,6 +78,7 @@ class SummaryBaseHandler extends Handler {
             ...context.period.monthly,
           },
           sharedDelivCatReqContext),
+        // 2) del.3
         PlantLogCtrl.aggregateDeliveryByCustomerCategory(
           'weekly',
           {
@@ -79,6 +86,7 @@ class SummaryBaseHandler extends Handler {
             ...context.period.weekly,
           },
           sharedDelivCatReqContext),
+        // 3) del.4
         PlantLogCtrl.aggregateDeliveryByCustomerCategory(
           'daily',
           {
@@ -86,6 +94,7 @@ class SummaryBaseHandler extends Handler {
             ...context.period.daily,
           },
           sharedDelivCatReqContext),
+        // 4) gen.1
         PlantLogCtrl.aggregateGen(
           'yearly',
           buildPlantFiltersRepo(
@@ -96,6 +105,7 @@ class SummaryBaseHandler extends Handler {
             false
           ),
           sharedGenReqContext),
+        // 5) gen.2
         PlantLogCtrl.aggregateGen(
           'monthly',
           buildPlantFiltersRepo(
@@ -106,6 +116,7 @@ class SummaryBaseHandler extends Handler {
             false
           ),
           sharedGenReqContext),
+        // 6) gen.3
         PlantLogCtrl.aggregateGen(
           'weekly',
           buildPlantFiltersRepo(
@@ -116,6 +127,7 @@ class SummaryBaseHandler extends Handler {
             false
           ),
           sharedGenReqContext),
+        // 7) gen.4
         PlantLogCtrl.aggregateGen(
           'daily',
           buildPlantFiltersRepo(
@@ -126,6 +138,7 @@ class SummaryBaseHandler extends Handler {
             true
           ),
           sharedGenReqContext),
+        // 8) plants
         PlantCtrl.filteredPlants(
           plantFilters.plantsFilter,
           plantFilters.plantsStatusFilter,
@@ -138,17 +151,9 @@ class SummaryBaseHandler extends Handler {
             'project.id': 1,
             setup: 1,
           },
-          { 'dates.business': 1, name: 1 }),
-        PlantLogCtrl.aggregateForecast(
-          'daily',
-          buildPlantFiltersRepo(
-            {
-              ...context.filter,
-              ...context.period.daily,
-            },
-            true,
-          )
-        ),
+          { 'dates.business': 1, name: 1 },
+          true),
+        // 9) fsct.2.all-services
         PlantServiceLogCtrl.aggregateSales(
           'daily',
           buildPlantFiltersRepo(
@@ -162,14 +167,23 @@ class SummaryBaseHandler extends Handler {
         ),
       ])
         .then(promiseAllResult => resolve(Promise.all([
+          // 0) del.1
           promiseAllResult[0].model.aggregate(promiseAllResult[0].aggregation.pipeline()).exec(),
+          // 1) del.2
           promiseAllResult[1].model.aggregate(promiseAllResult[1].aggregation.pipeline()).exec(),
+          // 2) del.3
           promiseAllResult[2].model.aggregate(promiseAllResult[2].aggregation.pipeline()).exec(),
+          // 3) del.4
           promiseAllResult[3].model.aggregate(promiseAllResult[3].aggregation.pipeline()).exec(),
+          // 4) gen.1
           new Promise(resolve => resolve(promiseAllResult[4].readResult)),
+          // 5) gen.2
           new Promise(resolve => resolve(promiseAllResult[5].readResult)),
+          // 6) gen.3
           new Promise(resolve => resolve(promiseAllResult[6].readResult)),
+          // 7) gen.4
           new Promise(resolve => resolve(promiseAllResult[7].readResult)),
+          // 8) plants
           new Promise(resolve => {
             const startOfBusinessDatesByPlantId = {};
             promiseAllResult[8].forEach(startOfBusinessDateItem => {
@@ -178,7 +192,7 @@ class SummaryBaseHandler extends Handler {
                 date: startOfBusinessDateItem.dates.business
                   ? DateFormatter.formatDateOrDefault(startOfBusinessDateItem.dates.business, dateFormatter)
                   : 'n.a.',
-                country: startOfBusinessDateItem.village.country,
+                country: startOfBusinessDateItem.village.country['default-name'],
                 village: startOfBusinessDateItem.village.name,
                 project: startOfBusinessDateItem.project.id,
                 pvCap: startOfBusinessDateItem.setup.pv.cpty,
@@ -188,8 +202,190 @@ class SummaryBaseHandler extends Handler {
             })
             resolve(startOfBusinessDatesByPlantId);
           }),
+          // 9) fsct.2.all-services
           new Promise(resolve => resolve(promiseAllResult[9].readResult)),
-          new Promise(resolve => resolve(promiseAllResult[10].readResult)),
+          // 10) fcst.2.hierarcical-electricity
+          new Promise(resolve => {
+            const clusterizedForecastPromises = []
+            const clusterizer = new PlantsClusterizer(promiseAllResult[8]);
+            // per-country e-forecasts
+            if (!clusterizer.hasSingleCountry()) {
+              Object.entries(clusterizer.countryClusters()).forEach(countryCluster => {
+                clusterizedForecastPromises.push(
+                  PlantLogCtrl.aggregateForecast(
+                    'daily',
+                    buildPlantFiltersRepo(
+                      {
+                        plants: countryCluster[1],
+                        ...context.period.dailyClusters,
+                      },
+                      true,
+                    )
+                  )
+                    .then(clusterizedForecastResult => new Promise(resolve => {
+                      resolve({
+                        tag: 'country',
+                        cnt: countryCluster[1].length,
+                        key: countryCluster[0],
+                        value: clusterizedForecastResult.readResult
+                      })
+                    })));
+              });
+            }
+            // per-project e-forecasts
+            if (!clusterizer.hasSingleProject()) {
+              Object.entries(clusterizer.projectClusters()).forEach(projectCluster => {
+                clusterizedForecastPromises.push(
+                  PlantLogCtrl.aggregateForecast(
+                    'daily',
+                    buildPlantFiltersRepo(
+                      {
+                        plants: projectCluster[1],
+                        ...context.period.dailyClusters,
+                      },
+                      true,
+                    )
+                  )
+                    .then(clusterizedForecastResult => new Promise(resolve => {
+                      resolve({
+                        tag: 'project',
+                        cnt: projectCluster[1].length,
+                        key: projectCluster[0],
+                        value: clusterizedForecastResult.readResult
+                      })
+                    })));
+              });
+            }
+            // per-plant e-forecasts
+            if (!clusterizer.hasSinglePlant()) {
+              Object.entries(clusterizer.plantClusters()).forEach(plantCluster => {
+                clusterizedForecastPromises.push(
+                  PlantLogCtrl.aggregateForecast(
+                    'daily',
+                    buildPlantFiltersRepo(
+                      {
+                        plants: plantCluster[1],
+                        ...context.period.dailyClusters,
+                      },
+                      true,
+                    )
+                  )
+                    .then(clusterizedForecastResult => new Promise(resolve => {
+                      resolve({
+                        tag: 'plant',
+                        cnt: plantCluster[1].length,
+                        key: plantCluster[0],
+                        value: clusterizedForecastResult.readResult
+                      })
+                    })));
+              });
+            }
+            resolve(Promise.all(clusterizedForecastPromises)
+              .then(promiseAllResult => new Promise(resolve => {
+                const uncoveredPlants = new Set([...clusterizer.plantList()]);
+                const eForecastCluster = {
+                  clusterizer,
+                  totalizer: {
+                    sampleDates: {
+                      min: undefined,
+                      max: undefined,
+                    },
+                    finModel: {
+                      forecast: 0.0,
+                      actual: 0.0,
+                    },
+                    energy: {
+                      forecast: 0.0,
+                      actual: 0.0,
+                    }
+                  }
+                }
+                promiseAllResult.forEach(clusterizedForecastResult => {
+                  eForecastCluster[clusterizedForecastResult.tag] = eForecastCluster[clusterizedForecastResult.tag] || {}
+                  eForecastCluster[clusterizedForecastResult.tag][clusterizedForecastResult.key] = {
+                    totalPlants: clusterizedForecastResult.cnt,
+                    value: clusterizedForecastResult.value
+                  }
+                  if (clusterizedForecastResult.value.length) {
+                    uncoveredPlants.delete(clusterizedForecastResult.key)
+                    const sampleIndex = clusterizedForecastResult.value.length - 1;
+                    const sampleDate = new Date(clusterizedForecastResult.value[sampleIndex]['_id']);
+                    if (!eForecastCluster.totalizer.sampleDates.min || eForecastCluster.totalizer.sampleDates.min > sampleDate) {
+                      eForecastCluster.totalizer.sampleDates.min = sampleDate;
+                    }
+                    if (!eForecastCluster.totalizer.sampleDates.max || eForecastCluster.totalizer.sampleDates.max < sampleDate) {
+                      eForecastCluster.totalizer.sampleDates.max = sampleDate;
+                    }
+                    eForecastCluster.totalizer.finModel.forecast += clusterizedForecastResult.value[sampleIndex]['fm-fcst-cum-tccy']
+                    eForecastCluster.totalizer.finModel.actual += clusterizedForecastResult.value[sampleIndex]['fm-real-cum-tccy']
+                    eForecastCluster.totalizer.energy.forecast += clusterizedForecastResult.value[sampleIndex]['es-fcst-cum']
+                    eForecastCluster.totalizer.energy.actual += clusterizedForecastResult.value[sampleIndex]['es-real-cum']
+                  }
+                });
+                resolve({
+                  uncoveredPlants,
+                  eForecastCluster,
+                })
+              }))
+              .then(eForecastClusterResult => new Promise(resolve => {
+                const uncoveredClusterizedForecastPromises = [
+                  new Promise(resolve => resolve(eForecastClusterResult.eForecastCluster))
+                ];
+                eForecastClusterResult.uncoveredPlants.forEach(uncoveredClusterKey => {
+                  uncoveredClusterizedForecastPromises.push(
+                    PlantLogCtrl.aggregateForecast(
+                      'daily',
+                      buildPlantFiltersRepo(
+                        {
+                          // tsTo: context.period.dailyClusters.tsTo,
+                          tsTo: DateFormatter.formatDateOrDefault(new Date(new Date(context.period.dailyClusters.tsTo).setDate(new Date(context.period.dailyClusters.tsTo).getDate() - 1)), dateFormatter),
+                          plants: clusterizer.plantClusters()[uncoveredClusterKey],
+                        },
+                        true,
+                      ),
+                      {},
+                      {
+                        limit: 1,
+                        sort: {
+                          ts: -1
+                        }
+                      }
+                    )
+                      .then(uncoveredPlantClusterForecastResult => new Promise(resolve => {
+                        resolve({
+                          key: uncoveredClusterKey,
+                          value: uncoveredPlantClusterForecastResult.readResult
+                        })
+                      })));
+                });
+                resolve(Promise.all(uncoveredClusterizedForecastPromises))
+              }))
+              .then(promiseAllResult => new Promise(resolve => {
+                for (let index = 1; index < promiseAllResult.length; index++) {
+                  if (promiseAllResult[index].value.length) {
+                    promiseAllResult[0]['plant'] = promiseAllResult[0]['plant'] || {}
+                    promiseAllResult[0]['plant'][promiseAllResult[index].key] = {
+                      totalPlants: 1,
+                      value: promiseAllResult[index].value
+                    };
+                    const sampleDate = new Date(promiseAllResult[index].value[0]['_id']);
+                    if (!promiseAllResult[0].totalizer.sampleDates.min || promiseAllResult[0].totalizer.sampleDates.min > sampleDate) {
+                      promiseAllResult[0].totalizer.sampleDates.min = sampleDate;
+                    }
+                    if (!promiseAllResult[0].totalizer.sampleDates.max || promiseAllResult[0].totalizer.sampleDates.max < sampleDate) {
+                      promiseAllResult[0].totalizer.sampleDates.max = sampleDate;
+                    }
+                    promiseAllResult[0].totalizer.finModel.forecast += promiseAllResult[index].value[0]['fm-fcst-cum-tccy'];
+                    promiseAllResult[0].totalizer.finModel.actual += promiseAllResult[index].value[0]['fm-real-cum-tccy'];
+                    promiseAllResult[0].totalizer.energy.forecast += promiseAllResult[index].value[0]['es-fcst-cum'];
+                    promiseAllResult[0].totalizer.energy.actual += promiseAllResult[index].value[0]['es-real-cum'];
+                  }
+                }
+                promiseAllResult[0].totalizer.diff += 100 * (promiseAllResult[0].totalizer.actual - promiseAllResult[0].totalizer.forecast) / promiseAllResult[0].totalizer.forecast;
+                resolve(promiseAllResult[0])
+              }))
+            );
+          }),
         ])))
     })
       .then(promiseAllResult => new Promise(resolve => {
@@ -221,8 +417,8 @@ class SummaryBaseHandler extends Handler {
             deliv: promiseAllResult[3],
           },
           startOfBusinessDatesByPlantId: promiseAllResult[8],
-          eForecast: promiseAllResult[9],
-          battForecast: promiseAllResult[10],
+          eForecast: promiseAllResult[10],
+          battForecast: promiseAllResult[9],
         }));
       }))
       .then(pdfReportBlob => new Promise(resolve => resolve([
@@ -262,3 +458,88 @@ class SummaryBaseHandler extends Handler {
 
 
 module.exports = SummaryBaseHandler;
+
+
+// private part
+
+class PlantsClusterizer {
+  constructor (plantList) {
+    this._inputPlantList = plantList || []
+    this._countryList = undefined
+    this._projectList = undefined
+    this._plantList = undefined
+  }
+
+  countryList () {
+    if (!this._countryList) {
+      this._countryList = [...new Set(this._inputPlantList.map(plantInfo => plantInfo.village.country['default-name']))]
+    }
+    return this._countryList
+  }
+
+  countryClusters () {
+    return this.buildCluster(plantInfo => plantInfo.village.country['default-name'])
+  }
+
+  projectList () {
+    if (!this._projectList) {
+      this._projectList = [...new Set(this._inputPlantList.map(plantInfo => plantInfo.project.id))]
+    }
+    return this._projectList
+  }
+
+  projectClusters () {
+    return this.buildCluster(plantInfo => plantInfo.project.id)
+  }
+
+  plantList () {
+    if (!this._plantList) {
+      this._plantList = [...new Set(this._inputPlantList.map(plantInfo => plantInfo.name))]
+    }
+    return this._plantList
+  }
+
+  plantClusters () {
+    return this.buildCluster(plantInfo => plantInfo.name)
+  }
+
+  hasSingleCountry () {
+    return this.countryList().length === 1
+  }
+
+  hasSingleProject () {
+    return this.projectList().length === 1
+  }
+
+  hasSinglePlant () {
+    return this.plantList().length === 1
+  }
+
+  buildCluster (keyExtractor, valueExtractor = plantInfo => plantInfo._id) {
+    const result = {}
+    this._inputPlantList.forEach(plantInfo => {
+      const key = keyExtractor(plantInfo)
+      result[key] = result[key] || []
+      result[key].push(valueExtractor(plantInfo))
+    })
+    return result
+  }
+
+  projectClustersByCountry (country) {
+    const projectsByCountry = [...new Set(this.buildCluster(plantInfo => plantInfo.village.country['default-name'], plantInfo => plantInfo.project.id)[country])]
+    const cluster = {}
+    projectsByCountry.forEach(clusterKey => {
+      cluster[clusterKey] = this.projectClusters()[clusterKey]
+    })
+    return cluster
+  }
+
+  plantClustersByProject (project) {
+    const plantsByProject = [...new Set(this.buildCluster(plantInfo => plantInfo.project.id, plantInfo => plantInfo.name)[project])]
+    const cluster = {}
+    plantsByProject.forEach(clusterKey => {
+      cluster[clusterKey] = this.plantClusters()[clusterKey]
+    })
+    return cluster
+  }
+}

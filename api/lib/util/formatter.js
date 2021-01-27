@@ -42,8 +42,6 @@ class DateFormatter extends BaseFormatter {
   static buildISODateFormatter (onlyDate = true) {
     return v => {
       let result = v.toISOString();
-      // FIXME
-      console.log(`${v} -> ${result}`);
       if (onlyDate) {
         result = result.split('T', 1)[0];
       }

@@ -123,9 +123,9 @@ exports.plantExistsById = plantId => {
 };
 
 // cRud/filteredPlants
-exports.filteredPlants = (plantsFilter, plantsStatusFilter, plantsLocationsFilter, projection, sort) => {
+exports.filteredPlants = (plantsFilter, plantsStatusFilter, plantsLocationsFilter, projection, sort, includeCountryInfo = false) => {
   return new Promise((resolve, reject) => {
-    let aggregation = buildFilterPlantAggregation(plantsFilter, plantsStatusFilter, plantsLocationsFilter, false)
+    let aggregation = buildFilterPlantAggregation(plantsFilter, plantsStatusFilter, plantsLocationsFilter, false, includeCountryInfo)
 
     if (JsonObjectHelper.isNotEmpty(sort)) {
       aggregation = aggregation.sort(sort);
@@ -319,7 +319,7 @@ exports.aggregateDeliveryByCustomerCategory = (
 //
 // private part
 
-const buildFilterPlantAggregation = (plantsFilter, plantsStatusFilter, plantsLocationsFilter, autoProjection = true) => {
+const buildFilterPlantAggregation = (plantsFilter, plantsStatusFilter, plantsLocationsFilter, autoProjection = true, includeCountryInfo = false) => {
   let result = Plant.aggregate()
     // plantsFilter is always not empty
     // at least selects enabled plants
@@ -361,6 +361,18 @@ const buildFilterPlantAggregation = (plantsFilter, plantsStatusFilter, plantsLoc
       .unwind('$village')
       //
       ;
+    if (includeCountryInfo) {
+      result = result
+        .lookup({
+          from: 'countries',
+          localField: 'village.country',
+          foreignField: '_id',
+          as: 'village.country'
+        })
+        .unwind('$village.country')
+        //
+        ;
+    }
     if (autoProjection) {
       result = result.project({
         village: 1,

@@ -976,6 +976,7 @@ const buildForecastGrouping = (period, context) => {
 
 const getForecastBasicAccumulators = () => {
   return {
+    'cnt': { $sum: 1 },
     'eafs': { $sum: '$eafs' },
     'es-fcst': { $sum: '$es-fcst' },
     'es-fcst-cum': { $sum: '$es-fcst-cum' },

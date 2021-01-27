@@ -134,6 +134,6 @@ app.use((error, req, res, next) => {
 app.listen(process.env.NODE_PORT, '0.0.0.0', function () {
   if (isLocalEnv) {
     // print a message when the server starts listening
-    console.log(`server starting on ${process.env.NODE_PORT}`);
+    console.info(`server starting on ${process.env.NODE_PORT}`);
   }
 });

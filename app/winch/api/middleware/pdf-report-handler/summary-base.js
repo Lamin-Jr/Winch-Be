@@ -33,6 +33,8 @@ class SummaryBaseHandler extends Handler {
             const reportTitle = `Summary report of ${context.period.to}`;
 
             const plantsInfo = Object.values(context.startOfBusinessDatesByPlantId);
+            const periodBegin = extractPeriodBegin(plantsInfo)
+            const periodEnd = extractPeriodEnd(context.daily)
             const countries = [...new Set(plantsInfo.map(entryValue => entryValue.country))];
             const projects = [...new Set(plantsInfo.map(entryValue => entryValue.project))];
             const plantsTotals = plantsInfo.reduce((previousValue, currentValue) => {
@@ -42,14 +44,13 @@ class SummaryBaseHandler extends Handler {
               };
             });
 
-            const eFcstSample = context.eForecast[context.eForecast.length - 1];
-            const eFcstDiff = 100 * (eFcstSample['fm-real-cum-tccy'] - eFcstSample['fm-fcst-cum-tccy']) / eFcstSample['fm-fcst-cum-tccy'];
+            const eFcstDiff = 100 * (context.eForecast.totalizer.finModel.actual - context.eForecast.totalizer.finModel.forecast) / context.eForecast.totalizer.finModel.forecast;
             const eFcstDiffStyle = eFcstDiff < 0 ? 'tableCellBodyNumberNegative' : 'tableCellBodyNumber'
             const battFcstSample = context.battForecast[context.battForecast.length - 1];
             const battFcstDiff = 100 * (battFcstSample['fm-real-cum-tccy'] - battFcstSample['fm-fcst-cum-tccy']) / battFcstSample['fm-fcst-cum-tccy'];
             const battFcstDiffStyle = battFcstDiff < 0 ? 'tableCellBodyNumberNegative' : 'tableCellBodyNumber'
-            const totForecast = eFcstSample['fm-fcst-cum-tccy'] + battFcstSample['fm-fcst-cum-tccy']
-            const totActual = eFcstSample['fm-real-cum-tccy'] + battFcstSample['fm-real-cum-tccy']
+            const totForecast = context.eForecast.totalizer.finModel.forecast + battFcstSample['fm-fcst-cum-tccy']
+            const totActual = context.eForecast.totalizer.finModel.actual + battFcstSample['fm-real-cum-tccy']
             const totDiff = 100 * (totActual - totForecast) / totForecast;
             const totDiffStyle = totDiff < 0 ? 'tableCellBodyNumberNegative' : 'tableCellBodyNumber'
 
@@ -58,12 +59,12 @@ class SummaryBaseHandler extends Handler {
                 title: `[PDF] ${reportTitle}`
               },
               ...buildBasicDocumentOption({
-                ...buildLandscapePageSetup([27, 48 + 50, 27, 48], 'A3'),
+                ...buildLandscapePageSetup([27, 48 + 36, 27, 48], 'A3'),
                 locale: context.locale
               }),
               content: [
                 // title
-                { text: 'Report:', alignment: 'left', bold: true, fontSize: 16, margin: [150, -50 - 25, 0, 0] },
+                { text: 'Report:', alignment: 'left', bold: true, fontSize: 16, margin: [150, -36 - 25, 0, 0] },
                 { text: reportTitle, alignment: 'left', fontSize: 14, margin: [150, 10, 0, 48] },
                 { text: 'Brief information', style: 'parTitle' },
                 // recap tables
@@ -89,15 +90,29 @@ class SummaryBaseHandler extends Handler {
                             ],
                             [
                               { text: 'Period begin: ', style: 'recapTableColHead' },
-                              { text: extractPeriodBegin(plantsInfo), style: 'recapTableCellBody' },
+                              { text: periodBegin, style: 'recapTableCellBody' },
                             ],
                             [
                               { text: 'Period end: ', style: 'recapTableColHead' },
-                              { text: extractPeriodEnd(context.daily), style: 'recapTableCellBody' },
+                              { text: periodEnd, style: 'recapTableCellBody' },
                             ],
                             [
                               { text: 'Average tariff [SLL/kWh]: ', style: 'recapTableColHead' },
-                              { text: NumberFormatter.formatNumberOrDefault(7596, formatter.twoDigitFraction), style: 'recapTableCellBodyNumber' },
+                              {
+                                table: {
+                                  body: [
+                                    [
+                                      { text: `Before ${DateFormatter.formatDateOrDefault(new Date('2020-10-30'), DateFormatter.buildISOZoneDateFormatter())}:`, style: 'recapTableCellBody' },
+                                      { text: `${NumberFormatter.formatNumberOrDefault(7596, formatter.twoDigitFraction)}`, style: 'recapTableCellBodyNumber' },
+                                    ],
+                                    [
+                                      { text: `After ${DateFormatter.formatDateOrDefault(new Date('2020-11-01'), DateFormatter.buildISOZoneDateFormatter())}:`, style: 'recapTableCellBody' },
+                                      { text: `${NumberFormatter.formatNumberOrDefault(7329, formatter.twoDigitFraction)}`, style: 'recapTableCellBodyNumber' },
+                                    ]
+                                  ]
+                                },
+                                layout: 'noBorders'
+                              },
                             ],
                             [
                               { text: 'Exchange rate [SLL/USD]: ', style: 'recapTableColHead' },
@@ -168,10 +183,18 @@ class SummaryBaseHandler extends Handler {
                             ],
                             [
                               { text: 'Energy', style: 'forecastTableRowHeader' },
-                              { text: NumberFormatter.formatNumberOrDefault(eFcstSample['fm-fcst-cum-tccy'], formatter.twoDigitFraction), style: 'tableCellBodyNumber' },
-                              { text: NumberFormatter.formatNumberOrDefault(eFcstSample['fm-real-cum-tccy'], formatter.twoDigitFraction), style: 'tableCellBodyNumber' },
+                              { text: NumberFormatter.formatNumberOrDefault(context.eForecast.totalizer.finModel.forecast, formatter.twoDigitFraction), style: 'tableCellBodyNumber' },
+                              { text: NumberFormatter.formatNumberOrDefault(context.eForecast.totalizer.finModel.actual, formatter.twoDigitFraction), style: 'tableCellBodyNumber' },
                               { text: `${NumberFormatter.formatNumberOrDefault(eFcstDiff, formatter.twoDigitFraction)}%`, style: eFcstDiffStyle },
-                              { text: `Last update: ${eFcstSample._id}\nTotal energy sold: ${NumberFormatter.formatNumberOrDefault(eFcstSample['es-real-cum'], formatter.twoDigitFraction)} kWh\nForecast figures take in account the ramp-up curve.`, style: 'forecastTableCellBodyNote' },
+                              {
+                                text: [
+                                  `Oldest plant update: ${DateFormatter.formatDateOrDefault(context.eForecast.totalizer.sampleDates.min, DateFormatter.buildISOZoneDateFormatter())}.`,
+                                  `\nLatest plant update: ${DateFormatter.formatDateOrDefault(context.eForecast.totalizer.sampleDates.max, DateFormatter.buildISOZoneDateFormatter())}.`,
+                                  `\nTotal energy sold: ${NumberFormatter.formatNumberOrDefault(context.eForecast.totalizer.energy.actual, formatter.twoDigitFraction)} kWh`,
+                                  `\nForecast figures take in account the ramp-up curve.`,
+                                ],
+                                style: 'forecastTableCellBodyNote',
+                              },
                             ],
                             [
                               { text: 'Battery rental', style: 'forecastTableRowHeader' },
@@ -194,106 +217,18 @@ class SummaryBaseHandler extends Handler {
                     ]],
                   },
                 },
-                { text: 'Energy sold and revenues - long/mid-term: yearly, monthly, and weekly overview', pageBreak: 'before', style: 'parTitle' },
-                // yearly table
-                {
-                  margin: [0, 0, 0, 24],
-                  table: {
-                    widths: buildPeriodTableWidths(),
-                    body: [
-                      ...buildPeriodTableHeadRows('Year'),
-                      ...buildPeriodTableBodyRows({
-                        periodSamples: context.yearly,
-                        buildGenSampleKey: sample => sample._id.b.split('-', 1)[0],
-                        buildGenPeriodBeginDate: sample => new Date(sample._id.b),
-                        buildGenPeriodEndDate: sample => new Date(sample._id.e),
-                        buildDelivSampleKey: sample => sample._id.b.split('-', 1)[0],
-                        buildDelivPeriodBeginDate: sample => new Date(sample._id.b),
-                        buildDelivPeriodEndDate: sample => new Date(sample._id.e),
-                        formatter,
-                      }),
-                    ],
-                  },
-                },
-                // monthly table
-                {
-                  margin: [0, 0, 0, 24],
-                  table: {
-                    widths: buildPeriodTableWidths(),
-                    body: [
-                      ...buildPeriodTableHeadRows('Month'),
-                      ...buildPeriodTableBodyRows({
-                        periodSamples: context.monthly,
-                        buildGenSampleKey: sample => {
-                          const dateTokens = sample._id.b.split('-');
-                          return `${dateTokens[0]}-${dateTokens[1]}`;
-                        },
-                        buildGenPeriodBeginDate: sample => new Date(sample._id.b),
-                        buildGenPeriodEndDate: sample => new Date(sample._id.e),
-                        buildDelivSampleKey: sample => {
-                          const dateTokens = sample._id.b.split('-');
-                          return `${dateTokens[0]}-${dateTokens[1]}`;
-                        },
-                        buildDelivPeriodBeginDate: sample => new Date(sample._id.b),
-                        buildDelivPeriodEndDate: sample => new Date(sample._id.e),
-                        formatter,
-                      }),
-                    ],
-                  },
-                },
-                // weekly table
-                {
-                  margin: [0, 0, 0, 24],
-                  table: {
-                    widths: buildPeriodTableWidths(),
-                    body: [
-                      ...buildPeriodTableHeadRows('Week'),
-                      ...buildPeriodTableBodyRows({
-                        periodSamples: context.weekly,
-                        buildGenSampleKey: sample => `${sample._id.b}\n${sample._id.e}`,
-                        buildGenPeriodBeginDate: sample => new Date(sample._id.b),
-                        buildGenPeriodEndDate: sample => new Date(sample._id.e),
-                        buildDelivSampleKey: sample => `${sample._id.b}\n${sample._id.e}`,
-                        buildDelivPeriodBeginDate: sample => new Date(sample._id.b),
-                        buildDelivPeriodEndDate: sample => new Date(sample._id.e),
-                        formatter,
-                      }),
-                    ],
-                  },
-                },
-                { text: 'Energy sold and revenues - shot-term: daily overview (last 31 days)', pageBreak: 'before', style: 'parTitle' },
-                // daily table
-                {
-                  margin: [0, 0, 0, 24],
-                  table: {
-                    widths: buildPeriodTableWidths(),
-                    body: [
-                      ...buildPeriodTableHeadRows('Day'),
-                      ...buildPeriodTableBodyRows({
-                        periodSamples: context.daily,
-                        buildGenSampleKey: sample => sample._id.d,
-                        buildGenPeriodBeginDate: sample => new Date(new Date(sample._id.d).setDate(new Date(sample._id.d).getDate() - 1)),
-                        buildGenPeriodEndDate: sample => new Date(sample._id.d),
-                        buildDelivSampleKey: sample => sample._id.d,
-                        buildDelivPeriodBeginDate: sample => new Date(new Date(sample._id.d).setDate(new Date(sample._id.d).getDate() - 1)),
-                        buildDelivPeriodEndDate: sample => new Date(sample._id.d),
-                        formatter,
-                      }),
-                    ],
-                  },
-                },
               ],
               styles: {
                 // shared
                 parTitle: {
                   bold: true,
                   fontSize: 13,
-                  margin: [0, 0, 0, 24],
+                  margin: [0, 0, 0, 16],
                 },
                 parTitle2: {
                   bold: true,
                   fontSize: 12,
-                  margin: [0, 0, 0, 20],
+                  margin: [0, 0, 0, 12],
                 },
                 tableHeader: {
                   bold: true
@@ -347,7 +282,281 @@ class SummaryBaseHandler extends Handler {
               },
             };
 
-          /*const doc = */maker.createPdf(content).getBuffer(pdfBuffer => resolve(pdfBuffer));
+            // BEGIN: Analytics section
+            //
+            content.content.push(
+              { text: 'Electricity service analytics', pageBreak: 'before', style: 'parTitle' },
+              { text: 'Recap', style: 'parTitle2' },
+              // analytics / recap tables
+              {
+                layout: 'noBorders',
+                margin: [0, 0, 0, 24],
+                table: {
+                  widths: ['*', 'auto', '*'],
+                  body: [[
+                    '',
+                    {
+                      table: {
+                        widths: [200, 200, 200, 175],
+                        body: [
+                          [
+                            { text: 'Sales forecast', border: [true, true, true, false], style: ['tableHeader', 'forecastTableColHeaderColored'] },
+                            { text: 'Actual sales', border: [true, true, true, false], style: ['tableHeader', 'forecastTableColHeaderColored'] },
+                            { text: 'Difference', border: [true, true, true, false], style: ['tableHeader', 'forecastTableColHeaderColored'] },
+                            { text: 'Note', border: [true, true, true, false], style: 'tableHeader' },
+                          ],
+                          [
+                            { text: 'US$', border: [true, false, true, true], style: ['forecastTableColHeaderColored', 'forecastTableColSubHeaderLower'] },
+                            { text: 'US$', border: [true, false, true, true], style: ['forecastTableColHeaderColored', 'forecastTableColSubHeaderLower'] },
+                            { text: '%', border: [true, false, true, true], style: ['forecastTableColHeaderColored', 'forecastTableColSubHeaderLower'] },
+                            { text: '', border: [true, false, true, true], style: 'forecastTableColSubHeaderLower' },
+                          ],
+                          [
+                            { text: NumberFormatter.formatNumberOrDefault(context.eForecast.totalizer.finModel.forecast, formatter.twoDigitFraction), style: 'tableCellBodyNumber' },
+                            { text: NumberFormatter.formatNumberOrDefault(context.eForecast.totalizer.finModel.actual, formatter.twoDigitFraction), style: 'tableCellBodyNumber' },
+                            { text: `${NumberFormatter.formatNumberOrDefault(eFcstDiff, formatter.twoDigitFraction)}%`, style: eFcstDiffStyle },
+                            {
+                              text: [
+                                `Oldest plant update: ${DateFormatter.formatDateOrDefault(context.eForecast.totalizer.sampleDates.min, DateFormatter.buildISOZoneDateFormatter())}.`,
+                                `\nLatest plant update: ${DateFormatter.formatDateOrDefault(context.eForecast.totalizer.sampleDates.max, DateFormatter.buildISOZoneDateFormatter())}.`,
+                                `\nTotal energy sold: ${NumberFormatter.formatNumberOrDefault(context.eForecast.totalizer.energy.actual, formatter.twoDigitFraction)} kWh`,
+                                `\nForecast figures take in account the ramp-up curve.`,
+                              ],
+                              style: 'forecastTableCellBodyNote',
+                            },
+                          ],
+                        ],
+                      }
+                    },
+                    '',
+                  ]],
+                },
+              },
+            )
+            content.content.push({
+              text: [
+                'Period: from ',
+                { text: periodBegin, bold: true },
+                ' to ',
+                { text: periodEnd, bold: true },
+                '.'
+              ]
+            })
+            if (context.eForecast.clusterizer.hasSingleCountry()) {
+              content.content.push({
+                text: [
+                  'This recap matches ',
+                  { text: context.eForecast.clusterizer.countryList()[0], bold: true },
+                  ' country clustering.'
+                ]
+              })
+            } else {
+              // TODO country cluster table (as already done for plants)
+            }
+            if (context.eForecast.clusterizer.hasSingleCountry() &&
+              context.eForecast.clusterizer.hasSingleProject()) {
+              content.content.push({
+                text: [
+                  'This recap matches ',
+                  { text: context.eForecast.clusterizer.projectList()[0], bold: true },
+                  ' project clustering.'
+                ]
+              })
+            } else {
+              // TODO project cluster table (as already done for plants)
+            }
+            if (context.eForecast.clusterizer.hasSingleCountry() &&
+              context.eForecast.clusterizer.hasSingleProject() &&
+              context.eForecast.clusterizer.hasSinglePlant()) {
+              content.content.push({
+                text: [
+                  'This recap matches ',
+                  { text: context.eForecast.clusterizer.plantList()[0], bold: true },
+                  ' plants clustering.'
+                ]
+              })
+            } else {
+              content.content.push({
+                margin: [0, 10, 0, 0],
+                text: `Plant list${context.eForecast.clusterizer.hasSingleProject() ? ` of ${context.eForecast.clusterizer.projectList()[0]} project` : ''}`,
+                style: 'parTitle2',
+              })
+              // analytics / plant clusters e-forecast table
+              const plantClustersEForecastTable = {
+                layout: 'noBorders',
+                margin: [0, 0, 0, 24],
+                table: {
+                  widths: ['*', 'auto', '*'],
+                  body: [[
+                    '',
+                    {
+                      table: {
+                        widths: ['auto', 200, 200, 200, 175],
+                        body: [
+                          [
+                            { text: '', border: [false, false, true, false] },
+                            { text: 'Sales forecast', border: [true, true, true, false], style: ['tableHeader', 'forecastTableColHeaderColored'] },
+                            { text: 'Actual sales', border: [true, true, true, false], style: ['tableHeader', 'forecastTableColHeaderColored'] },
+                            { text: 'Difference', border: [true, true, true, false], style: ['tableHeader', 'forecastTableColHeaderColored'] },
+                            { text: 'Note', border: [true, true, true, false], style: 'tableHeader' },
+                          ],
+                          [
+                            { text: '', border: [false, false, true, true], style: 'forecastTableColSubHeaderLower' },
+                            { text: 'US$', border: [true, false, true, true], style: ['forecastTableColHeaderColored', 'forecastTableColSubHeaderLower'] },
+                            { text: 'US$', border: [true, false, true, true], style: ['forecastTableColHeaderColored', 'forecastTableColSubHeaderLower'] },
+                            { text: '%', border: [true, false, true, true], style: ['forecastTableColHeaderColored', 'forecastTableColSubHeaderLower'] },
+                            { text: '', border: [true, false, true, true], style: 'forecastTableColSubHeaderLower' },
+                          ],
+                        ],
+                      }
+                    },
+                    '',
+                  ]],
+                },
+              }
+              plantClustersEForecastTable.table.body[0][1].table.body.push(
+                ...Object.entries(context.eForecast.plant)
+                  .sort((a, b) => a[0].localeCompare(b[0]))
+                  .map(plantClusterEntry => {
+                    let eFcstClusterSample = undefined;
+                    for (let index = plantClusterEntry[1].value.length - 1; index >= 0; index--) {
+                      if (!eFcstClusterSample) {
+                        eFcstClusterSample = plantClusterEntry[1].value[index]
+                        continue
+                      }
+                      if (eFcstClusterSample['fm-real-cum-tccy'] >= plantClusterEntry[1].value[index]['fm-real-cum-tccy']) {
+                        break
+                      }
+                      eFcstClusterSample['fm-real-cum-tccy'] = plantClusterEntry[1].value[index]['fm-real-cum-tccy']
+                    }
+                    let eFcstClusterDiff = undefined
+                    let eFcstClusterDiffStyle = 'tableCellBodyNumber'
+                    let eFcstClusterNote = 'Monitoring data n.a.'
+                    if (eFcstClusterSample) {
+                      eFcstClusterDiff = 100 * (eFcstClusterSample['fm-real-cum-tccy'] - eFcstClusterSample['fm-fcst-cum-tccy']) / eFcstClusterSample['fm-fcst-cum-tccy']
+                      eFcstClusterDiffStyle = eFcstClusterDiff < 0 ? 'tableCellBodyNumberNegative' : 'tableCellBodyNumber';
+                      eFcstClusterNote = `Last update: ${eFcstClusterSample._id}\nTotal energy sold: ${NumberFormatter.formatNumberOrDefault(eFcstClusterSample['es-real-cum'], formatter.twoDigitFraction)} kWh\nForecast figures take in account the ramp-up curve.`
+                    }
+                    return [
+                      { text: plantClusterEntry[0], style: 'forecastTableRowHeader' },
+                      { text: NumberFormatter.formatNumberOrDefault(eFcstClusterSample ? eFcstClusterSample['fm-fcst-cum-tccy'] : undefined, formatter.twoDigitFraction, '-'), style: 'tableCellBodyNumber' },
+                      { text: NumberFormatter.formatNumberOrDefault(eFcstClusterSample ? eFcstClusterSample['fm-real-cum-tccy'] : undefined, formatter.twoDigitFraction, '-'), style: 'tableCellBodyNumber' },
+                      { text: `${NumberFormatter.formatNumberOrDefault(eFcstClusterDiff, formatter.twoDigitFraction, '-')}%`, style: eFcstClusterDiffStyle },
+                      { text: eFcstClusterNote, style: 'forecastTableCellBodyNote' },
+                    ]
+                  }),
+                [
+                  { text: 'Totals', alignment: 'right', style: 'tableHeader' },
+                  { text: NumberFormatter.formatNumberOrDefault(context.eForecast.totalizer.finModel.forecast, formatter.twoDigitFraction), style: ['tableHeader', 'tableCellBodyNumber'] },
+                  { text: NumberFormatter.formatNumberOrDefault(context.eForecast.totalizer.finModel.actual, formatter.twoDigitFraction), style: ['tableHeader', 'tableCellBodyNumber'] },
+                  { text: `${NumberFormatter.formatNumberOrDefault(eFcstDiff, formatter.twoDigitFraction)}%`, style: ['tableHeader', eFcstDiffStyle] },
+                  {},
+                ],
+              );
+
+              content.content.push(plantClustersEForecastTable)
+            }
+            //
+            // END: Analytics section
+
+            // BEGIN: Accruals section
+            //
+            // // TODO unlock on generation info avalable
+            // content.content.push(
+            //   { text: 'Electricity service accruals', pageBreak: 'before', style: 'parTitle' },
+            //   { text: 'Long/mid-term: yearly, monthly, and weekly overview', style: 'parTitle2' },
+            //   // yearly table
+            //   {
+            //     margin: [0, 0, 0, 24],
+            //     table: {
+            //       widths: buildPeriodTableWidths(),
+            //       body: [
+            //         ...buildPeriodTableHeadRows('Year'),
+            //         ...buildPeriodTableBodyRows({
+            //           periodSamples: context.yearly,
+            //           buildGenSampleKey: sample => sample._id.b.split('-', 1)[0],
+            //           buildGenPeriodBeginDate: sample => new Date(sample._id.b),
+            //           buildGenPeriodEndDate: sample => new Date(sample._id.e),
+            //           buildDelivSampleKey: sample => sample._id.b.split('-', 1)[0],
+            //           buildDelivPeriodBeginDate: sample => new Date(sample._id.b),
+            //           buildDelivPeriodEndDate: sample => new Date(sample._id.e),
+            //           formatter,
+            //         }),
+            //       ],
+            //     },
+            //   },
+            //   // monthly table
+            //   {
+            //     margin: [0, 0, 0, 24],
+            //     table: {
+            //       widths: buildPeriodTableWidths(),
+            //       body: [
+            //         ...buildPeriodTableHeadRows('Month'),
+            //         ...buildPeriodTableBodyRows({
+            //           periodSamples: context.monthly,
+            //           buildGenSampleKey: sample => {
+            //             const dateTokens = sample._id.b.split('-');
+            //             return `${dateTokens[0]}-${dateTokens[1]}`;
+            //           },
+            //           buildGenPeriodBeginDate: sample => new Date(sample._id.b),
+            //           buildGenPeriodEndDate: sample => new Date(sample._id.e),
+            //           buildDelivSampleKey: sample => {
+            //             const dateTokens = sample._id.b.split('-');
+            //             return `${dateTokens[0]}-${dateTokens[1]}`;
+            //           },
+            //           buildDelivPeriodBeginDate: sample => new Date(sample._id.b),
+            //           buildDelivPeriodEndDate: sample => new Date(sample._id.e),
+            //           formatter,
+            //         }),
+            //       ],
+            //     },
+            //   },
+            //   // weekly table
+            //   {
+            //     margin: [0, 0, 0, 24],
+            //     table: {
+            //       widths: buildPeriodTableWidths(),
+            //       body: [
+            //         ...buildPeriodTableHeadRows('Week'),
+            //         ...buildPeriodTableBodyRows({
+            //           periodSamples: context.weekly,
+            //           buildGenSampleKey: sample => `${sample._id.b}\n${sample._id.e}`,
+            //           buildGenPeriodBeginDate: sample => new Date(sample._id.b),
+            //           buildGenPeriodEndDate: sample => new Date(sample._id.e),
+            //           buildDelivSampleKey: sample => `${sample._id.b}\n${sample._id.e}`,
+            //           buildDelivPeriodBeginDate: sample => new Date(sample._id.b),
+            //           buildDelivPeriodEndDate: sample => new Date(sample._id.e),
+            //           formatter,
+            //         }),
+            //       ],
+            //     },
+            //   },
+            //   // daily table
+            //   { text: 'Shot-term: daily overview (last 31 days)', pageBreak: 'before', style: 'parTitle2' },
+            //   {
+            //     margin: [0, 0, 0, 24],
+            //     table: {
+            //       widths: buildPeriodTableWidths(),
+            //       body: [
+            //         ...buildPeriodTableHeadRows('Day'),
+            //         ...buildPeriodTableBodyRows({
+            //           periodSamples: context.daily,
+            //           buildGenSampleKey: sample => sample._id.d,
+            //           buildGenPeriodBeginDate: sample => new Date(new Date(sample._id.d).setDate(new Date(sample._id.d).getDate() - 1)),
+            //           buildGenPeriodEndDate: sample => new Date(sample._id.d),
+            //           buildDelivSampleKey: sample => sample._id.d,
+            //           buildDelivPeriodBeginDate: sample => new Date(new Date(sample._id.d).setDate(new Date(sample._id.d).getDate() - 1)),
+            //           buildDelivPeriodEndDate: sample => new Date(sample._id.d),
+            //           formatter,
+            //         }),
+            //       ],
+            //     },
+            //   },
+            // );
+            //
+            // END: Accruals section
+
+            /*const doc = */maker.createPdf(content).getBuffer(pdfBuffer => resolve(pdfBuffer));
           });
       } catch (error) {
         reject(error);
@@ -358,12 +567,14 @@ class SummaryBaseHandler extends Handler {
 
 
 const extractPeriodBegin = (plantsInfo) => {
-  return plantsInfo.reduce((acc, current) => !acc
-    ? new Date(current.date)
-    : (new Date(acc) < new Date(current.date)
-      ? acc
-      : current.date)
-  )
+  return plantsInfo
+    .map(plantInfo => plantInfo.date)
+    .reduce((acc, current) => !acc
+      ? new Date(current)
+      : (new Date(acc) < new Date(current)
+        ? acc
+        : current)
+    );
 }
 
 const extractPeriodEnd = (dailySamples) => {
