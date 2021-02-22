@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 
-const CustomerCtrl = require('../controllers/customer');
-const checkAuth = require('../../../../api/middleware/check-auth');
-const retrieveUserProfile = require('../../../../api/middleware/retrieve-user-profile');
-const queryParser = require('../../../../api/middleware/parse-query');
+const CustomerCtrl = require('../../../controllers/customer');
+const checkAuth = require('../../../../../../api/middleware/check-auth');
+const retrieveUserProfile = require('../../../../../../api/middleware/retrieve-user-profile');
+const queryParser = require('../../../../../../api/middleware/parse-query');
 
-const setAppName = require('../middleware/rest/set-app-name');
+const setAppName = require('../../../middleware/rest/set-app-name');
 
 
 //

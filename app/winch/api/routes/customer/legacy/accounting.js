@@ -1,24 +1,24 @@
 const express = require('express');
 const router = express.Router();
 
-const CustomerAccountingCtrl = require('../../controllers/customer/accounting_legacy');
+const CustomerAccountingCtrl = require('../../../controllers/customer/accounting_legacy');
 
-const S2SCtrl = require('../../../../../api/controllers/s2s');
+const S2SCtrl = require('../../../../../../api/controllers/s2s');
 
-const checkAuth = require('../../../../../api/middleware/check-auth');
-const retrieveUserProfile = require('../../../../../api/middleware/retrieve-user-profile');
+const checkAuth = require('../../../../../../api/middleware/check-auth');
+const retrieveUserProfile = require('../../../../../../api/middleware/retrieve-user-profile');
 
-const setAppName = require('../../middleware/rest/set-app-name');
+const setAppName = require('../../../middleware/rest/set-app-name');
 
 const {
   WellKnownJsonRes
   // JsonResWriter,
-} = require('../../../../../api/middleware/json-response-util');
+} = require('../../../../../../api/middleware/json-response-util');
 
 const {
   json,
   text,
-} = require('../../../../../api/middleware/check-accept-header');
+} = require('../../../../../../api/middleware/check-accept-header');
 
 const checkApiToken = (req, res, next) => {
   const apiTokenChecks = []

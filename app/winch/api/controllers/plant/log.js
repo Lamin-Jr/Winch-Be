@@ -430,6 +430,7 @@ exports.aggregateDeliveryByCustomerCategory = (
   context = {
     aggregator: undefined,
     'exchange-rate': undefined,
+    'show-pods': false
   },
   q = { sort: { _id: 1 } },
 ) => {
@@ -448,14 +449,6 @@ exports.aggregateDeliveryByCustomerCategory = (
 
       let aggregation = Plant.aggregate()
         .match(filtersRepo.plantsFilter)
-        // TODO check if code moving is correct
-        // .lookup({
-        //   from: 'plants-status',
-        //   localField: '_id',
-        //   foreignField: '_id',
-        //   as: 'monitor'
-        // })
-        // .unwind('$monitor')
         //
         ;
 
@@ -468,31 +461,10 @@ exports.aggregateDeliveryByCustomerCategory = (
             as: 'monitor'
           })
           .unwind('$monitor')
-          .match(filtersRepo.plantsStatusFilter);
+          .match(filtersRepo.plantsStatusFilter)
+          //
+          ;
       }
-
-      // TODO check if code moving is correct
-      // aggregation = aggregation
-      //   .lookup({
-      //     from: 'villages',
-      //     localField: 'village',
-      //     foreignField: '_id',
-      //     as: 'village'
-      //   })
-      //   .unwind('$village')
-      //   //
-      //   ;
-
-      // aggregation = aggregation
-      //   .lookup({
-      //     from: 'plants-drivers',
-      //     localField: '_id',
-      //     foreignField: '_id',
-      //     as: 'driver'
-      //   })
-      //   .unwind('$driver')
-      //   //
-      //   ;
 
       if (filtersRepo.plantsLocationsFilter) {
         aggregation = aggregation
@@ -503,7 +475,9 @@ exports.aggregateDeliveryByCustomerCategory = (
             as: 'village'
           })
           .unwind('$village')
-          .match(filtersRepo.plantsLocationsFilter);
+          .match(filtersRepo.plantsLocationsFilter)
+          //
+          ;
       }
       aggregation = aggregation
         .lookup({
@@ -859,19 +833,20 @@ const buildDeliveryGrouping = (period, context) => {
 
 const buildDeliverySharedAccumulators = (context) => {
   return {
-    'av': { $avg: { $divide: [ '$avc', context.daysInPeriod * 96.0 ] } },
+    'av': { $avg: { $divide: ['$avc', context.daysInPeriod * 96.0] } },
     'b-lccy': { $avg: '$b-lccy' },
-    'b-tccy': { $avg: '$b-tccy' },
     'cc': { $sum: 1 },
     'ct': { $addToSet: '$ct' },
+    ... (context['show-pods'] === true
+      ? { 'pod': { $addToSet: '$pod' } }
+      : {}
+    ),
+    'ep': { $sum: '$ep' },
     'es': { $sum: '$es' },
     'r-es-lccy': { $sum: '$r-es-lccy' },
-    'r-es-tccy': { $sum: '$r-es-tccy' },
-    'r-sg-lccy': { $sum: '$r-sg-lccy' },
-    'r-sg-tccy': { $sum: '$r-sg-tccy' },
+    'r-sc-lccy': { $sum: '$r-sc-lccy' },
     'tx-es-c': { $sum: '$tx-es-c' },
     'tx-es-lccy': { $sum: '$tx-es-lccy' },
-    'tx-es-tccy': { $sum: '$tx-es-tccy' },
   };
 };
 
@@ -880,7 +855,7 @@ const buildDeliveryDailyAccumulators = (context) => {
     'ts': { $first: '$ts' },
     ...buildDeliverySharedAccumulators({ ...context, daysInPeriod: 1 }),
   };
-  applyDeliveryExchangeRate(result, context['exchange-rate'] /* TODO || '$tccy-er' */)
+  applyDeliveryExchangeRate(result, context['exchange-rate'] || '$tccy-er')
   return result;
 };
 
@@ -891,20 +866,22 @@ const buildDeliveryRangedAccumulators = (context) => {
     'tst': { $first: '$tst' },
     ...buildDeliverySharedAccumulators(context),
   };
-  applyDeliveryExchangeRate(result, context['exchange-rate'] /* TODO || '$tccy-er' */)
+  applyDeliveryExchangeRate(result, context['exchange-rate'] || '$tccy-er')
   return result;
 };
 
 const applyDeliveryExchangeRate = (target, customExchangeRate) => {
-  if (!customExchangeRate) {
-    return;
-  }
   // if a custom exchange rate is passed, let's overwrite involved accumulator
   target['b-tccy'] = { $avg: { $multiply: ['$b-lccy', customExchangeRate] } };
   target['r-es-tccy'] = { $sum: { $multiply: ['$r-es-lccy', customExchangeRate] } };
+  target['r-sc-tccy'] = { $sum: { $multiply: ['$r-sc-lccy', customExchangeRate] } };
   target['tx-es-tccy'] = { $sum: { $multiply: ['$tx-es-lccy', customExchangeRate] } };
+  if (customExchangeRate === '$tccy-er') {
+    target['avg-tccy-er'] = { $avg: customExchangeRate };
+  }
 }
 
+// BEGIN GROUP: By categories
 const buildDeliveryRangedGroupByCategoriesId = () => {
   return {
     ...buildDefaultRangedGroupId(),
@@ -917,6 +894,22 @@ const buildDeliveryRangedAccumulatorsByCategories = (context) => {
   delete result.ct;
   return result;
 }
+// END GROUP: By categories
+
+// BEGIN GROUP: By pods
+const buildDeliveryRangedGroupByPodsId = () => {
+  return {
+    ...buildDefaultRangedGroupId(),
+    pod: "$pod",
+  }
+}
+
+const buildDeliveryRangedAccumulatorsByPods = (context) => {
+  const result = buildDeliveryRangedAccumulators(context);
+  delete result.pod;
+  return result;
+}
+// END GROUP: By pods
 
 const deliveryGroupingStrategy = {
   default: {
@@ -954,6 +947,29 @@ const deliveryGroupingStrategy = {
       weekly: (context) => buildDeliveryRangedAccumulatorsByCategories({ ...context, daysInPeriod: 7, }),
       monthly: (context) => buildDeliveryRangedAccumulatorsByCategories({ ...context, daysInPeriod: 30.4375, }),
       yearly: (context) => buildDeliveryRangedAccumulatorsByCategories({ ...context, daysInPeriod: 365.25, }),
+    }
+  },
+  customers: {
+    groupId: {
+      daily: () => {
+        return {
+          d: buildDefaultDailyGroupId(),
+          pod: "$pod",
+        };
+      },
+      weekly: buildDeliveryRangedGroupByPodsId,
+      monthly: buildDeliveryRangedGroupByPodsId,
+      yearly: buildDeliveryRangedGroupByPodsId,
+    },
+    accumulators: {
+      daily: (context) => {
+        const result = buildDeliveryDailyAccumulators(context);
+        delete result.pod;
+        return result;
+      },
+      weekly: (context) => buildDeliveryRangedAccumulatorsByPods({ ...context, daysInPeriod: 7, }),
+      monthly: (context) => buildDeliveryRangedAccumulatorsByPods({ ...context, daysInPeriod: 30.4375, }),
+      yearly: (context) => buildDeliveryRangedAccumulatorsByPods({ ...context, daysInPeriod: 365.25, }),
     }
   },
 };

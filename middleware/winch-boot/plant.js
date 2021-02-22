@@ -165,62 +165,62 @@ function getPlantBuilders () {
     // -> Sierra Leone / WP2
     'Alikalia': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Alikalia', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.151992, -11.388275, villageId, undefined, undefined, 103.50, 444.86, 0.00, buildOrganization(), 0, 0, 0, 394)
+        buildPlant(systemCreator, 'Alikalia', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.151992, -11.388275, villageId, undefined, undefined, 111.78, 384.0, 0.00, buildOrganization(), 0, 0, 0, 331)
       ];
     },
     'Bendugu Mongo': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Bendugu Mongo', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.535237, -10.957753, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 212)
+        buildPlant(systemCreator, 'Bendugu Mongo', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.535237, -10.957753, villageId, undefined, undefined, 55.89, 192.0, 0.00, buildOrganization(), 0, 0, 0, 179)
       ];
     },
     'Bindi': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Bindi', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.915203, -11.447152, villageId, undefined, undefined, 103.50, 444.86, 0.00, buildOrganization(), 0, 0, 0, 468)
+        buildPlant(systemCreator, 'Bindi', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.915203, -11.447152, villageId, undefined, undefined, 111.78, 384.0, 0.00, buildOrganization(), 0, 0, 0, 393)
       ];
     },
     'Dogoloya': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Dogoloya', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.708182, -11.55197, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 208)
+        buildPlant(systemCreator, 'Dogoloya', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.708182, -11.55197, villageId, undefined, undefined, 55.89, 192.0, 0.00, buildOrganization(), 0, 0, 0, 174)
       ];
     },
     'Falaba': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Falaba', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.854305, -11.320968, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 260)
+        buildPlant(systemCreator, 'Falaba', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.854305, -11.320968, villageId, undefined, undefined, 55.89, 192.0, 0.00, buildOrganization(), 0, 0, 0, 218)
       ];
     },
     'Firawa': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Firawa', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.358892, -11.30088, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 268)
+        buildPlant(systemCreator, 'Firawa', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.358892, -11.30088, villageId, undefined, undefined, 55.89, 192.0, 0.00, buildOrganization(), 0, 0, 0, 226)
       ];
     },
     'Gbendembu': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Gbendembu', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.108262, -12.20772, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 261)
+        buildPlant(systemCreator, 'Gbendembu', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.108262, -12.20772, villageId, undefined, undefined, 55.89, 192.0, 0.00, buildOrganization(), 0, 0, 0, 220)
       ];
     },
     'Kondembaia': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Kondembaia', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.382413, -11.567958, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 212)
+        buildPlant(systemCreator, 'Kondembaia', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.382413, -11.567958, villageId, undefined, undefined, 55.89, 192.0, 0.00, buildOrganization(), 0, 0, 0, 179)
       ];
     },
     'Masumbri': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Masumbri', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 8.822325, -11.754525, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 236)
+        buildPlant(systemCreator, 'Masumbri', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 8.822325, -11.754525, villageId, undefined, undefined, 55.89, 192.0, 0.00, buildOrganization(), 0, 0, 0, 199)
       ];
     },
     'Mathoir': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Mathoir', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 8.484747, -12.417392, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 250)
+        buildPlant(systemCreator, 'Mathoir', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 8.484747, -12.417392, villageId, undefined, undefined, 55.89, 192.0, 0.00, buildOrganization(), 0, 0, 0, 210)
       ];
     },
     'Sambia Bendugu': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Sambia Bendugu', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.062537, -11.488232, villageId, undefined, undefined, 103.50, 444.86, 0.00, buildOrganization(), 0, 0, 0, 427)
+        buildPlant(systemCreator, 'Sambia Bendugu', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.062537, -11.488232, villageId, undefined, undefined, 111.78, 384.0, 0.00, buildOrganization(), 0, 0, 0, 358)
       ];
     },
     'Seria': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Seria', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.46446, -10.923058, villageId, undefined, undefined, 51.75, 222.43, 0.00, buildOrganization(), 0, 0, 0, 230)
+        buildPlant(systemCreator, 'Seria', 'Sierra Leone Unops WP2', 'SLL_2019_002', 'WP2', 9.46446, -10.923058, villageId, undefined, undefined, 55.89, 192.0, 0.00, buildOrganization(), 0, 0, 0, 193)
       ];
     },
     // -> Togo
@@ -230,36 +230,7 @@ function getPlantBuilders () {
       ];
     },
     // -> Uganda
-    'Agoro': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Agoro (incl. Tumanum B)', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.797533, 33.016575, villageId, undefined, undefined, 76.80, 288.00, 0.00, buildOrganization(), 0, 0, 0, 235)
-      ];
-    },
-    'Apwoyo TC ': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Apwoyo TC ', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.759322, 32.999982, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 46)
-      ];
-    },
-    'Apyetta TC': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Apyetta TC', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.37173, 32.4165, villageId, undefined, undefined, 76.80, 288.00, 0.00, buildOrganization(), 0, 0, 0, 189)
-      ];
-    },
-    'Apyetta West': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Apyetta West', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.3062, 32.37103, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 79)
-      ];
-    },
-    'Aweno Olwi': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Aweno Olwi', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.719, 32.7478, villageId, undefined, undefined, 19.20, 72.00, 0.00, buildOrganization(), 0, 0, 0, 55)
-      ];
-    },
-    'Ayuu Alali': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Ayuu Alali', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.53991, 32.56081, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 102)
-      ];
-    },
+    // -> Uganda / Bunjako
     'Bugoma': (villageId) => {
       return [
         buildPlant(systemCreator, 'Bugoma', 'Uganda Bunjako Island', 'UGA_2019_003', 'Bunjako', -0.04757, 32.148877, villageId, undefined, undefined, 38.40, 148.32, 0.00, buildOrganization(), 0, 0, 0, 70)
@@ -270,105 +241,136 @@ function getPlantBuilders () {
         buildPlant(systemCreator, 'Bukina', 'Uganda Bunjako Island', 'UGA_2019_003', 'Bunjako', -0.044698, 32.20927, villageId, undefined, undefined, 9.60, 38.40, 0.00, buildOrganization(), 0, 0, 0, 0)
       ];
     },
-    'Kapeta': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Kapeta', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.504054, 32.591669, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 73)
-      ];
-    },
-    'Labayango': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Labayango (School and Village)', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.520616, 32.865017, villageId, undefined, undefined, 19.20, 72.00, 0.00, buildOrganization(), 0, 0, 0, 44)
-      ];
-    },
-    'Lapidiyenyi': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Lapidiyenyi', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.581635, 32.931536, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 199)
-      ];
-    },
-    'Lelapwot West': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Lelapwot West', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.6269, 32.708736, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 53)
-      ];
-    },
-    'Logwak': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Logwak', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.657853, 32.740582, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 79)
-      ];
-    },
-    'Loromibeng': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Loromibeng A + B', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.758299, 33.039266, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 43)
-      ];
-    },
-    'Moroto East': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Moroto East', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.693575, 32.930281, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 44)
-      ];
-    },
-    'Muddu Central': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Muddu Central', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.497164, 32.452439, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 47)
-      ];
-    },
-    'Ngomoromo': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Ngomoromo', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.687719, 32.58713, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 97)
-      ];
-    },
-    'Oboko TC': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Oboko TC', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.670277, 32.984139, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 48)
-      ];
-    },
-    'Ogili TC': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Ogili TC', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.409353, 32.496177, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 131)
-      ];
-    },
-    'Opoki': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Opoki', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.429328, 32.716621, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 54)
-      ];
-    },
-    'Otaa': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Otaa', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.486728, 32.478779, villageId, undefined, undefined, 19.20, 72.00, 0.00, buildOrganization(), 0, 0, 0, 45)
-      ];
-    },
-    'Paloga Central': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Paloga Central', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.58893, 32.94357, villageId, undefined, undefined, 76.80, 288.00, 0.00, buildOrganization(), 0, 0, 0, 219)
-      ];
-    },
-    'Pangira / Licwar Central': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Pangira / Licwar Central', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.614721, 32.651851, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 123)
-      ];
-    },
-    'Pany Buk East and West ': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Pany Buk East and West ', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.670064, 32.954506, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 48)
-      ];
-    },
-    'Pawena TC': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Pawena TC', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.283056, 32.67194, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 100)
-      ];
-    },
-    'Potika ': (villageId) => {
-      return [
-        buildPlant(systemCreator, 'Potika ', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.719951, 32.881144, villageId, undefined, undefined, 38.40, 144.00, 0.00, buildOrganization(), 0, 0, 0, 114)
-      ];
-    },
     'Ssenyondo': (villageId) => {
       return [
         buildPlant(systemCreator, 'Ssenyondo', 'Uganda Bunjako Island', 'UGA_2019_003', 'Bunjako', -0.06675, 32.191303, villageId, undefined, undefined, 75.84, 296.64, 0.00, buildOrganization(), 0, 0, 0, 200),
         buildPlant(systemCreator, 'Hub', '-', '-', '-', -0.068013, 32.186464, villageId, undefined, undefined, 7.68, 37.54, 7.00, buildOrganization(), 0, 0, 0, 0)
       ];
     },
+    // -> Uganda / GIZ25
+    'Agoro': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Agoro (incl. Tumanum B)', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.797533, 33.016575, villageId, undefined, undefined, 77.76, 288.00, 0.00, buildOrganization(), 0, 0, 0, 235)
+      ];
+    },
+    'Apwoyo TC ': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Apwoyo TC', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.759322, 32.999982, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 46)
+      ];
+    },
+    'Apyetta TC': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Apyetta TC', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.37173, 32.4165, villageId, undefined, undefined, 77.76, 288.00, 0.00, buildOrganization(), 0, 0, 0, 189)
+      ];
+    },
+    'Apyetta West': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Apyetta West', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.3062, 32.37103, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 79)
+      ];
+    },
+    'Aweno Olwi': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Aweno Olwi', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.719, 32.7478, villageId, undefined, undefined, 19.44, 72.00, 0.00, buildOrganization(), 0, 0, 0, 55)
+      ];
+    },
+    'Ayuu Alali': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Ayuu Alali', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.53991, 32.56081, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 102)
+      ];
+    },
+    'Kapeta': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Kapeta', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.504054, 32.591669, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 73)
+      ];
+    },
+    'Labayango': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Labayango (School and Village)', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.520616, 32.865017, villageId, undefined, undefined, 19.44, 72.00, 0.00, buildOrganization(), 0, 0, 0, 44)
+      ];
+    },
+    'Lapidiyenyi': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Lapidiyenyi', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.581635, 32.931536, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 199)
+      ];
+    },
+    'Lelapwot West': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Lelapwot West', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.6269, 32.708736, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 53)
+      ];
+    },
+    'Logwak': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Logwak', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.657853, 32.740582, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 79)
+      ];
+    },
+    'Loromibeng': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Loromibeng A + B', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.758299, 33.039266, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 43)
+      ];
+    },
+    'Moroto East': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Moroto East', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.693575, 32.930281, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 44)
+      ];
+    },
+    'Muddu Central': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Muddu Central', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.497164, 32.452439, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 47)
+      ];
+    },
+    'Ngomoromo': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Ngomoromo', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.687719, 32.58713, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 97)
+      ];
+    },
+    'Oboko TC': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Oboko TC', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.670277, 32.984139, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 48)
+      ];
+    },
+    'Ogili TC': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Ogili TC', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.409353, 32.496177, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 131)
+      ];
+    },
+    'Opoki': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Opoki', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.429328, 32.716621, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 54)
+      ];
+    },
+    'Otaa': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Otaa', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.486728, 32.478779, villageId, undefined, undefined, 19.44, 72.00, 0.00, buildOrganization(), 0, 0, 0, 45)
+      ];
+    },
+    'Paloga Central': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Paloga Central', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.58893, 32.94357, villageId, undefined, undefined, 77.76, 288.00, 0.00, buildOrganization(), 0, 0, 0, 219)
+      ];
+    },
+    'Pangira / Licwar Central': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Pangira / Licwar Central', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.614721, 32.651851, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 123)
+      ];
+    },
+    'Pany Buk East and West ': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Pany Buk East and West', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.670064, 32.954506, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 48)
+      ];
+    },
+    'Pawena TC': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Pawena TC', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.283056, 32.67194, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 100)
+      ];
+    },
+    'Potika ': (villageId) => {
+      return [
+        buildPlant(systemCreator, 'Potika', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.719951, 32.881144, villageId, undefined, undefined, 38.88, 144.00, 0.00, buildOrganization(), 0, 0, 0, 114)
+      ];
+    },
     'Ywaya': (villageId) => {
       return [
-        buildPlant(systemCreator, 'Ywaya', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.694761, 33.080893, villageId, undefined, undefined, 19.20, 72.00, 0.00, buildOrganization(), 0, 0, 0, 35)
+        buildPlant(systemCreator, 'Ywaya', 'Uganda GIZ 25', 'UGA_2019_004', 'GIZ', 3.694761, 33.080893, villageId, undefined, undefined, 19.44, 72.00, 0.00, buildOrganization(), 0, 0, 0, 35)
       ];
     },
   }

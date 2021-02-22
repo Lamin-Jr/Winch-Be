@@ -54,7 +54,6 @@ exports.aggregate = (req, res, next) => {
 
   readingsFilter.ts = readingsFilter.ts || {};
   readingsFilter.ts['$gt'] = new Date(req.body.filter['ts-from']);
-  // FIXME trivial // readingsFilter.ts = readingsFilter.ts || {};
   readingsFilter.ts['$lte'] = new Date(req.body.filter['ts-to']);
 
   readingsFilter.m = req.body.filter['plant']
