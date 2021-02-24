@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 
-exports.buildPlantFiltersRepo = (inputFilter, isDailyPeriod, targetFilter = {}) => {
+exports.buildPlantFiltersRepo = (inputFilter, isDailyModel, targetFilter = {}) => {
   if (inputFilter) {
     // date range
     //
@@ -10,7 +10,7 @@ exports.buildPlantFiltersRepo = (inputFilter, isDailyPeriod, targetFilter = {}) 
       targetFilter.ts['$gte'] = new Date(inputFilter.tsFrom);
     }
     if (inputFilter.tsTo) {
-      const toFieldName = isDailyPeriod
+      const toFieldName = isDailyModel
         ? 'ts'
         : 'tst';
       targetFilter[toFieldName] = targetFilter[toFieldName] || {};
@@ -67,6 +67,11 @@ exports.buildPlantFilters = (inputFilter, targetFilter = {}) => {
       targetFilter.ct = inputFilter.categories.length === 1
         ? inputFilter.categories[0]
         : { $in: inputFilter.categories };
+    }
+    if (inputFilter.pods && inputFilter.pods.length) {
+      targetFilter.pod = inputFilter.pods.length === 1
+        ? inputFilter.pods[0]
+        : { $in: inputFilter.pods };
     }
   }
 

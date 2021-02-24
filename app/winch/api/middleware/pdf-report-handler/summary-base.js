@@ -665,7 +665,7 @@ const buildPeriodTableBodyRows = (context) => {
     sampleRow.data[6].text = accumulate(sampleRow.data[6].text, delivSample['r-sc-tccy']);
     sampleRow.data[7].text = accumulate(sampleRow.data[7].text, delivSample['r-es-tccy'] + delivSample['r-sc-tccy']);
     sampleRow.data[8].text = accumulate(sampleRow.data[8].text, delivSample['tx-es-tccy']);
-    sampleRow.data[11].text = accumulate(sampleRow.data[11].text, delivSample['cc']);
+    sampleRow.data[11].text = accumulate(sampleRow.data[11].text, delivSample['cnt']);
     sampleRow.data[12].text = accumulate(sampleRow.data[12].text, delivSample['es']);
 
     sampleRow.meta.totAvSamples++;

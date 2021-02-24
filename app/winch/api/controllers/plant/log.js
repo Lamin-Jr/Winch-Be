@@ -83,7 +83,7 @@ exports.e_deliv_cat = (req, res, next) => {
 exports.forecast = (req, res, next) => {
   exports.aggregateForecast(
     req.params.period,
-    buildPlantFiltersRepo(req.body.filter, req.params.period === 'daily'),
+    buildPlantFiltersRepo(req.body.filter, req.params.period === 'daily' || req.params.period === 'all'),
     req.body.context,
     req._q)
     .then(aggregateResult => {
@@ -126,7 +126,6 @@ exports.financial = (req, res, next) => {
 
   finPerformanceFilter.ts = finPerformanceFilter.ts || {};
   finPerformanceFilter.ts['$gte'] = new Date(req.body.filter['ts-from']);
-  finPerformanceFilter.ts = finPerformanceFilter.ts || {};
   finPerformanceFilter.ts['$lte'] = new Date(req.body.filter['ts-to']);
 
   finPerformanceFilter._id = new RegExp(`^${req.body.filter['plant'].replace(/\|/g, "\\|")}n\\d+\\|$`);
@@ -280,9 +279,13 @@ exports.aggregateGenByDriver = (
       if (!dbConn) {
         resolve(undefined)
       }
-      const schema = require(`../../../api/schemas/readings/gen-reading-${period}-log`);
-      const GenReadingPeriodModel = dbConn.model(`GenReading${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
-      const isDailyPeriod = period === 'daily';
+      const isAllPeriod = period === 'all'
+      const periodModelSelector = isAllPeriod
+        ? 'daily'
+        : period
+
+      const schema = require(`../../../api/schemas/readings/gen-reading-${periodModelSelector}-log`);
+      const GenReadingPeriodModel = dbConn.model(`GenReading${periodModelSelector.charAt(0).toUpperCase() + periodModelSelector.slice(1)}`, schema);
 
       let aggregation = GenReadingPeriodModel.aggregate()
         .match(filter);
@@ -295,11 +298,15 @@ exports.aggregateGenByDriver = (
         .group(buildGenGrouping(period, context))
         .sort(JsonObjectHelper.isNotEmpty(q.sort)
           ? q.sort
-          : isDailyPeriod
+          : periodModelSelector === 'daily'
             ? { ts: 1 }
             : { tsf: 1 })
         //
         ;
+
+      if (isAllPeriod) {
+        aggregation = applyAllPeriodDatesAdjust(aggregation);
+      }
 
       if (JsonObjectHelper.isNotEmpty(q.proj)) {
         aggregation = aggregation.project(q.proj);
@@ -338,8 +345,8 @@ exports.aggregateDelivery = (
 ) => {
   return new Promise((resolve, reject) => {
     try {
-      const isDailyPeriod = period === 'daily';
-      const filtersRepo = buildPlantFiltersRepo(filter, isDailyPeriod)
+      const isDailyModel = period === 'daily';
+      const filtersRepo = buildPlantFiltersRepo(filter, isDailyModel)
 
       PlantCtrl.filteredPlantIds(filtersRepo.plantsFilter, filtersRepo.plantsStatusFilter, filtersRepo.plantsLocationsFilter)
         .then(readResult => {
@@ -369,7 +376,7 @@ exports.aggregateDelivery = (
             .model(`MeterReading${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
           let aggregation = MeterReadingPeriodModel.aggregate()
             .match(filtersRepo.targetFilter)
-            .group(isDailyPeriod
+            .group(isDailyModel
               ? {
                 _id: '$d',
                 'ts': { $first: '$ts' },
@@ -400,7 +407,7 @@ exports.aggregateDelivery = (
               })
             .sort(JsonObjectHelper.isNotEmpty(q.sort)
               ? q.sort
-              : isDailyPeriod
+              : isDailyModel
                 ? { ts: 1 }
                 : { tsf: 1 })
             //
@@ -444,8 +451,13 @@ exports.aggregateDeliveryByCustomerCategory = (
         return;
       }
 
-      const isDailyPeriod = period === 'daily';
-      const filtersRepo = buildPlantFiltersRepo(filter, isDailyPeriod)
+      const isAllPeriod = period === 'all'
+      const periodModelSelector = isAllPeriod
+        ? 'daily'
+        : period
+
+      const isDailyModel = periodModelSelector === 'daily';
+      const filtersRepo = buildPlantFiltersRepo(filter, isDailyModel)
 
       let aggregation = Plant.aggregate()
         .match(filtersRepo.plantsFilter)
@@ -510,10 +522,10 @@ exports.aggregateDeliveryByCustomerCategory = (
 
           // perform actual aggregation
           //
-          const schema = require(`../../../api/schemas/readings/customer-${period}-log`);
+          const schema = require(`../../../api/schemas/readings/customer-${periodModelSelector}-log`);
           const CustomerPeriodModel = require('../../middleware/mongoose-db-conn').driverDBConnRegistry
             .get(readResult[0]._id)
-            .model(`Customer${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
+            .model(`Customer${periodModelSelector.charAt(0).toUpperCase() + periodModelSelector.slice(1)}`, schema);
           aggregation = CustomerPeriodModel.aggregate()
             .match({
               ...filtersRepo.targetFilter,
@@ -524,11 +536,15 @@ exports.aggregateDeliveryByCustomerCategory = (
             .group(deliveryGrouping)
             .sort(JsonObjectHelper.isNotEmpty(q.sort)
               ? q.sort
-              : isDailyPeriod
+              : isDailyModel
                 ? { ts: 1 }
                 : { tsf: 1 })
             //
             ;
+
+          if (isAllPeriod) {
+            aggregation = applyAllPeriodDatesAdjust(aggregation);
+          }
 
           if (JsonObjectHelper.isNotEmpty(q.proj)) {
             aggregation = aggregation.project(q.proj);
@@ -652,22 +668,31 @@ exports.aggregateForecastByDriver = (
 ) => {
   return new Promise((resolve, reject) => {
     try {
+      const isAllPeriod = period === 'all'
+      const periodModelSelector = isAllPeriod
+        ? 'daily'
+        : period
+
       const mongooseDbConn = require('../../middleware/mongoose-db-conn');
-      const schema = require(`../../schemas/kpi/forecast-${period}`);
+      const schema = require(`../../schemas/kpi/forecast-${periodModelSelector}`);
       const ForecastPeriodModel = mongooseDbConn.driverDBConnRegistry
         .get(driverDbKey)
-        .model(`Forecast${period.charAt(0).toUpperCase() + period.slice(1)}`, schema);
+        .model(`Forecast${periodModelSelector.charAt(0).toUpperCase() + periodModelSelector.slice(1)}`, schema);
 
-      const isDailyPeriod = period === 'daily';
+      const isDailyModel = periodModelSelector === 'daily';
 
       let aggregation = ForecastPeriodModel.aggregate()
         .match(filter)
         .group(buildForecastGrouping(period, context))
         .sort(JsonObjectHelper.isNotEmpty(q.sort)
           ? q.sort
-          : isDailyPeriod
+          : isDailyModel
             ? { ts: 1 }
             : { tsf: 1 })
+
+      if (isAllPeriod) {
+        aggregation = applyAllPeriodDatesAdjust(aggregation);
+      }
 
       if (JsonObjectHelper.isNotEmpty(q.proj)) {
         aggregation = aggregation.project(q.proj);
@@ -704,6 +729,10 @@ exports.aggregateForecastByDriver = (
 
 //   - grouping
 
+const buildDefaultAllGroupId = () => {
+  return null;
+};
+
 const buildDefaultDailyGroupId = () => {
   return '$d';
 };
@@ -712,7 +741,36 @@ const buildDefaultRangedGroupId = () => {
   return {
     b: '$d',
     e: '$dt',
-  }
+  };
+};
+
+const buildDailyTimeRangeAccumulators = () => {
+  return {
+    'tsf': { $min: '$ts' },
+    'tst': { $max: '$ts' },
+  };
+};
+
+const applyAllPeriodDatesAdjust = (aggregation) => {
+  const addDayStatement = { $add: ['$tst', 24 * 60 * 60000] }
+
+  return aggregation.addFields({
+    '_id': {
+      b: {
+        $dateToString: {
+          date: '$tsf',
+          format: '%Y-%m-%d',
+        }
+      },
+      e: {
+        $dateToString: {
+          date: addDayStatement,
+          format: '%Y-%m-%d',
+        }
+      },
+    },
+    'tst': addDayStatement
+  });
 };
 
 //   - grouping / gen
@@ -740,6 +798,14 @@ const buildGenSharedAccumulators = () => {
     'sens-t-mod': { '$avg': '$sens-t-mod' },
     'sens-t-out': { '$avg': '$sens-t-out' },
   };
+};
+
+const buildGenAllAccumulators = () => {
+  const result = {
+    ...buildDailyTimeRangeAccumulators(),
+    ...buildGenSharedAccumulators()
+  };
+  return result;
 };
 
 const buildGenDailyAccumulators = () => {
@@ -778,18 +844,20 @@ const buildGenRangedGroupByPlantsId = () => {
   return {
     ...buildDefaultRangedGroupId(),
     ...buildGenGroupByPlantsIdPart(),
-  }
-}
+  };
+};
 
 const genGroupingStrategy = {
   default: {
     groupId: {
+      all: buildDefaultAllGroupId,
       daily: buildDefaultDailyGroupId,
       weekly: buildDefaultRangedGroupId,
       monthly: buildDefaultRangedGroupId,
       yearly: buildDefaultRangedGroupId,
     },
     accumulators: {
+      all: (context) => buildGenAllAccumulators(context),
       daily: (context) => buildGenDailyAccumulators(context),
       weekly: (context) => buildGenRangedAccumulators(context),
       monthly: (context) => buildGenRangedAccumulators(context),
@@ -798,6 +866,7 @@ const genGroupingStrategy = {
   },
   plants: {
     groupId: {
+      all: buildDefaultAllGroupId,
       daily: () => {
         return {
           d: buildDefaultDailyGroupId(),
@@ -809,6 +878,7 @@ const genGroupingStrategy = {
       yearly: buildGenRangedGroupByPlantsId,
     },
     accumulators: {
+      all: (context) => buildGenAllAccumulators(context),
       daily: (context) => buildGenDailyAccumulators(context),
       weekly: (context) => buildGenRangedAccumulators(context),
       monthly: (context) => buildGenRangedAccumulators(context),
@@ -833,9 +903,11 @@ const buildDeliveryGrouping = (period, context) => {
 
 const buildDeliverySharedAccumulators = (context) => {
   return {
-    'av': { $avg: { $divide: ['$avc', context.daysInPeriod * 96.0] } },
+    ... (context.daysInPeriod
+      ? { 'av': { $avg: { $divide: ['$avc', context.daysInPeriod * 96.0] } } }
+      : { 'avc': { $sum: '$avc' } }),
     'b-lccy': { $avg: '$b-lccy' },
-    'cc': { $sum: 1 },
+    'cnt': { $sum: 1 },
     'ct': { $addToSet: '$ct' },
     ... (context['show-pods'] === true
       ? { 'pod': { $addToSet: '$pod' } }
@@ -850,12 +922,21 @@ const buildDeliverySharedAccumulators = (context) => {
   };
 };
 
+const buildDeliveryAllAccumulators = (context) => {
+  const result = {
+    ...buildDailyTimeRangeAccumulators(),
+    ...buildDeliverySharedAccumulators(context),
+  };
+  applyDeliveryExchangeRate(result, context['exchange-rate'] || '$tccy-er');
+  return result;
+};
+
 const buildDeliveryDailyAccumulators = (context) => {
   const result = {
     'ts': { $first: '$ts' },
     ...buildDeliverySharedAccumulators({ ...context, daysInPeriod: 1 }),
   };
-  applyDeliveryExchangeRate(result, context['exchange-rate'] || '$tccy-er')
+  applyDeliveryExchangeRate(result, context['exchange-rate'] || '$tccy-er');
   return result;
 };
 
@@ -866,7 +947,7 @@ const buildDeliveryRangedAccumulators = (context) => {
     'tst': { $first: '$tst' },
     ...buildDeliverySharedAccumulators(context),
   };
-  applyDeliveryExchangeRate(result, context['exchange-rate'] || '$tccy-er')
+  applyDeliveryExchangeRate(result, context['exchange-rate'] || '$tccy-er');
   return result;
 };
 
@@ -879,15 +960,15 @@ const applyDeliveryExchangeRate = (target, customExchangeRate) => {
   if (customExchangeRate === '$tccy-er') {
     target['avg-tccy-er'] = { $avg: customExchangeRate };
   }
-}
+};
 
 // BEGIN GROUP: By categories
 const buildDeliveryRangedGroupByCategoriesId = () => {
   return {
     ...buildDefaultRangedGroupId(),
     ct: "$ct",
-  }
-}
+  };
+};
 
 const buildDeliveryRangedAccumulatorsByCategories = (context) => {
   const result = buildDeliveryRangedAccumulators(context);
@@ -901,33 +982,36 @@ const buildDeliveryRangedGroupByPodsId = () => {
   return {
     ...buildDefaultRangedGroupId(),
     pod: "$pod",
-  }
-}
+  };
+};
 
 const buildDeliveryRangedAccumulatorsByPods = (context) => {
   const result = buildDeliveryRangedAccumulators(context);
   delete result.pod;
   return result;
-}
+};
 // END GROUP: By pods
 
 const deliveryGroupingStrategy = {
   default: {
     groupId: {
+      all: buildDefaultAllGroupId,
       daily: buildDefaultDailyGroupId,
       weekly: buildDefaultRangedGroupId,
       monthly: buildDefaultRangedGroupId,
       yearly: buildDefaultRangedGroupId,
     },
     accumulators: {
+      all: (context) => buildDeliveryAllAccumulators(context),
       daily: (context) => buildDeliveryDailyAccumulators(context),
       weekly: (context) => buildDeliveryRangedAccumulators({ ...context, daysInPeriod: 7, }),
       monthly: (context) => buildDeliveryRangedAccumulators({ ...context, daysInPeriod: 30.4375, }),
       yearly: (context) => buildDeliveryRangedAccumulators({ ...context, daysInPeriod: 365.25, }),
-    }
+    },
   },
   categories: {
     groupId: {
+      all: buildDefaultAllGroupId,
       daily: () => {
         return {
           d: buildDefaultDailyGroupId(),
@@ -939,6 +1023,7 @@ const deliveryGroupingStrategy = {
       yearly: buildDeliveryRangedGroupByCategoriesId,
     },
     accumulators: {
+      all: (context) => buildDeliveryAllAccumulators(context),
       daily: (context) => {
         const result = buildDeliveryDailyAccumulators(context);
         delete result.ct;
@@ -947,10 +1032,11 @@ const deliveryGroupingStrategy = {
       weekly: (context) => buildDeliveryRangedAccumulatorsByCategories({ ...context, daysInPeriod: 7, }),
       monthly: (context) => buildDeliveryRangedAccumulatorsByCategories({ ...context, daysInPeriod: 30.4375, }),
       yearly: (context) => buildDeliveryRangedAccumulatorsByCategories({ ...context, daysInPeriod: 365.25, }),
-    }
+    },
   },
   customers: {
     groupId: {
+      all: buildDefaultAllGroupId,
       daily: () => {
         return {
           d: buildDefaultDailyGroupId(),
@@ -962,6 +1048,7 @@ const deliveryGroupingStrategy = {
       yearly: buildDeliveryRangedGroupByPodsId,
     },
     accumulators: {
+      all: (context) => buildDeliveryAllAccumulators(context),
       daily: (context) => {
         const result = buildDeliveryDailyAccumulators(context);
         delete result.pod;
@@ -970,7 +1057,7 @@ const deliveryGroupingStrategy = {
       weekly: (context) => buildDeliveryRangedAccumulatorsByPods({ ...context, daysInPeriod: 7, }),
       monthly: (context) => buildDeliveryRangedAccumulatorsByPods({ ...context, daysInPeriod: 30.4375, }),
       yearly: (context) => buildDeliveryRangedAccumulatorsByPods({ ...context, daysInPeriod: 365.25, }),
-    }
+    },
   },
 };
 
@@ -1003,15 +1090,24 @@ const getForecastBasicAccumulators = () => {
     'fm-real-lccy': { $sum: '$fm-real-lccy' },
     'fm-real-cum-lccy': { $sum: '$fm-real-cum-lccy' },
     'ramp-up-avg-fctr': { $avg: '$ramp-up-fctr' },
-  }
-}
+  };
+};
+
+const buildForecastAllAccumulators = (context) => {
+  const result = {
+    ...buildDailyTimeRangeAccumulators(),
+    ...getForecastBasicAccumulators(),
+  };
+  applyForecastExchangeRate(result, context['exchange-rate'] || '$tccy-er');
+  return result;
+};
 
 const buildForecastDailyAccumulators = (context) => {
   const result = {
     'ts': { $first: '$ts' },
     ...getForecastBasicAccumulators(),
   };
-  applyForecastExchangeRate(result, context['exchange-rate'] || '$tccy-er')
+  applyForecastExchangeRate(result, context['exchange-rate'] || '$tccy-er');
   return result;
 };
 
@@ -1021,7 +1117,7 @@ const buildForecastRangedAccumulators = (context) => {
     'tst': { $first: '$tst' },
     ...getForecastBasicAccumulators(),
   };
-  applyForecastExchangeRate(result, context['exchange-rate'] || '$tccy-er')
+  applyForecastExchangeRate(result, context['exchange-rate'] || '$tccy-er');
   return result;
 };
 
@@ -1033,21 +1129,23 @@ const applyForecastExchangeRate = (target, customExchangeRate) => {
   if (customExchangeRate === '$tccy-er') {
     target['avg-tccy-er'] = { $avg: customExchangeRate };
   }
-}
+};
 
 const forecastGroupingStrategy = {
   default: {
     groupId: {
+      all: buildDefaultAllGroupId,
       daily: buildDefaultDailyGroupId,
       weekly: buildDefaultRangedGroupId,
       monthly: buildDefaultRangedGroupId,
       yearly: buildDefaultRangedGroupId,
     },
     accumulators: {
+      all: (context) => buildForecastAllAccumulators(context),
       daily: (context) => buildForecastDailyAccumulators(context),
       weekly: (context) => buildForecastRangedAccumulators(context),
       monthly: (context) => buildForecastRangedAccumulators(context),
       yearly: (context) => buildForecastRangedAccumulators(context),
-    }
+    },
   },
 };
