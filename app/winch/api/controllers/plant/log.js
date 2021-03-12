@@ -46,7 +46,7 @@ exports.e_deliv = (req, res, next) => {
   exports.aggregateDelivery(req.params.period, req.body.filter, req._q)
     .then(aggregationMeta => {
       if (!aggregationMeta) {
-        WellKnownJsonRes.okMulti(res);
+        WellKnownJsonRes.okEmpty(res);
         return;
       }
       BasicRead.aggregate(req, res, next, aggregationMeta.model, aggregationMeta.aggregation, req._q.skip, req._q.limit);
@@ -65,7 +65,7 @@ exports.e_deliv_cat = (req, res, next) => {
     req._q)
     .then(aggregationMeta => {
       if (!aggregationMeta) {
-        WellKnownJsonRes.okMulti(res);
+        WellKnownJsonRes.okEmpty(res);
         return;
       }
       BasicRead.aggregate(req, res, next, aggregationMeta.model, aggregationMeta.aggregation, req._q.skip, req._q.limit);

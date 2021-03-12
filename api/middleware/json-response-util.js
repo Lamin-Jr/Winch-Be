@@ -2,27 +2,31 @@
 
 class WellKnownJsonRes {
 
-  static _genericDebug(res, status, debugJson = undefined) {
+  static _genericDebug (res, status, debugJson = undefined) {
     new JsonResWriter(status)
       ._debug(debugJson)
       .applyTo(res);
   }
 
-  static conflict(res, debugJson = undefined) {
+  static badRequest (res, debugJson = undefined) {
+    WellKnownJsonRes._genericDebug(res, 400, debugJson);
+  }
+
+  static conflict (res, debugJson = undefined) {
     WellKnownJsonRes._genericDebug(res, 409, debugJson);
   }
 
-  static count(res, total = 0) {
+  static count (res, total = 0) {
     new JsonResWriter(200)
       ._total(total)
       .applyTo(res);
   }
 
-  static created(res, debugJson = undefined) {
+  static created (res, debugJson = undefined) {
     WellKnownJsonRes._genericDebug(res, 201, debugJson);
   }
 
-  static error(res, status = 500, messages = undefined, debugJson = undefined) {
+  static error (res, status = 500, messages = undefined, debugJson = undefined) {
     // res.status(<status>).json({
     //   status: <status>,
     //   messages: <messages>
@@ -34,7 +38,7 @@ class WellKnownJsonRes {
       .applyTo(res);
   }
 
-  static errorDebug(res, debugJson = undefined) {
+  static errorDebug (res, debugJson = undefined) {
     // res.status(500).json({
     //   status: 500,
     //   _debug: <debugJson>
@@ -42,15 +46,24 @@ class WellKnownJsonRes {
     WellKnownJsonRes._genericDebug(res, 500, debugJson);
   }
 
-  static notImplemented(res, message = undefined) {
+  static notImplemented (res, message = undefined) {
     // res.status(501).json({
     //   status: 501,
     //   messages: [ <message> ]
     // });
-    this.error(res, 501, message ? [ message ] : message);
+    this.error(res, 501, message ? [message] : message);
   }
 
-  static okSingle(res, jsonItem, status = 200, debugJson = undefined, messages = undefined) {
+  static okNoContent (res) {
+    new JsonResWriter(204)
+      .applyTo(res);
+  }
+
+  static okEmpty (res) {
+    WellKnownJsonRes.okMulti(res);
+  }
+
+  static okSingle (res, jsonItem, status = 200, debugJson = undefined, messages = undefined) {
     // res.status(<status>).json({
     //   status: <status>,
     //   total: 1,
@@ -68,7 +81,7 @@ class WellKnownJsonRes {
       .applyTo(res);
   }
 
-  static okMulti(res, total = 0, jsonItems = [], skip = 0, limit = 0, status = 200) {
+  static okMulti (res, total = 0, jsonItems = [], skip = 0, limit = 0, status = 200) {
     // res.status(<status>).json({
     //   status: <status>,
     //   total: <total>,
@@ -84,7 +97,7 @@ class WellKnownJsonRes {
       .applyTo(res);
   }
 
-  static okAutocomplete(res, jsonItems = [], hasNext = false, skip = 0, limit = 0, status = 200) {
+  static okAutocomplete (res, jsonItems = [], hasNext = false, skip = 0, limit = 0, status = 200) {
     // res.status(<status>).json({
     //   status: <status>,
     //   next: <hasNext>,
@@ -100,7 +113,7 @@ class WellKnownJsonRes {
       .applyTo(res);
   }
 
-  static notFound(res, skip = 0, limit = 0) {
+  static notFound (res, skip = 0, limit = 0) {
     // res.status(404).json({
     //   status: 404,
     //   total: 0,
@@ -115,7 +128,7 @@ class WellKnownJsonRes {
       .applyTo(res);
   }
 
-  static unauthorized(res, messages = ['Unauthorized'], debugJson = undefined) {
+  static unauthorized (res, messages = ['Unauthorized'], debugJson = undefined) {
     // return res.status(401).json({
     //   status: 401,
     //   messages: <messages>,
@@ -127,35 +140,35 @@ class WellKnownJsonRes {
 }
 
 class JsonResWriter {
-  constructor(status) {
+  constructor (status) {
     this.status = status;
   }
 
-  _status(status) {
+  _status (status) {
     this.status = status;
     return this;
   }
-  _total(total) {
+  _total (total) {
     this.total = total;
     return this;
   }
-  _skip(skip) {
+  _skip (skip) {
     this.skip = skip;
     return this;
   }
-  _limit(limit) {
+  _limit (limit) {
     this.limit = limit;
     return this;
   }
-  _next(next) {
+  _next (next) {
     this.next = next;
     return this;
   }
-  _resultSet(set) {
+  _resultSet (set) {
     this.set = set
     return this;
   }
-  _addToResultSet(item) {
+  _addToResultSet (item) {
     if (this.set === undefined) {
       this.set = [];
     }
@@ -164,34 +177,34 @@ class JsonResWriter {
     }
     return this;
   }
-  _messages(messages) {
+  _messages (messages) {
     this.messages = messages;
     return this;
   }
-  _addMessage(message) {
+  _addMessage (message) {
     if (this.messages === undefined) {
       this.messages = [];
     }
     this.messages.push(message);
     return this;
   }
-  _debug(_debug) {
+  _debug (_debug) {
     this._debug = _debug;
     return this;
   }
-  _addToDebug(key, value) {
+  _addToDebug (key, value) {
     if (this._debug === undefined) {
       this._debug = {};
     }
     this._debug[key] = value;
     return this;
   }
-  _add(key, value) {
+  _add (key, value) {
     return this._addAll({
       [key]: value
     });
   }
-  _addAll(jsonPartial) {
+  _addAll (jsonPartial) {
     if (this.customFields === undefined) {
       this.customFields = {};
     }
@@ -199,7 +212,7 @@ class JsonResWriter {
     return this;
   }
 
-  applyTo(res) {
+  applyTo (res) {
     if (!res) {
       return;
     }

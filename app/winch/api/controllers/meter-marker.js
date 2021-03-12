@@ -31,8 +31,8 @@ exports.read_by_marker_id = (req, res, next) => {
     }
   }
   if (missingParams.size !== 0) {
-      WellKnownJsonRes.error(res, 400, [`missing required params: \'${[...missingParams].join('\', \'')}\'`]);
-      return;
+    WellKnownJsonRes.error(res, 400, [`missing required params: \'${[...missingParams].join('\', \'')}\'`]);
+    return;
   }
 
   // select driver db key and site
@@ -51,7 +51,7 @@ exports.read_by_marker_id = (req, res, next) => {
     .exec()
     .then(findDriverResult => {
       if (!findDriverResult.length) {
-        WellKnownJsonRes.okMulti(res);
+        WellKnownJsonRes.okEmpty(res);
         return;
       }
 
@@ -85,7 +85,7 @@ exports.read_by_marker_id = (req, res, next) => {
         });
     })
     .catch(readError => {
-      WellKnownJsonRes.error(res, 500, [ `error encountered on retrieving meter markers`, readError.message ]);
+      WellKnownJsonRes.error(res, 500, [`error encountered on retrieving meter markers`, readError.message]);
       return;
     });
 };

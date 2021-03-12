@@ -90,7 +90,7 @@ exports.aggregate = (req, res, next) => {
     .exec()
     .then(findDriverResult => {
       if (!findDriverResult.length) {
-        WellKnownJsonRes.okMulti(res);
+        WellKnownJsonRes.okEmpty(res);
         return;
       }
 

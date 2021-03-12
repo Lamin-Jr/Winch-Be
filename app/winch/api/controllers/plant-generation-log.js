@@ -7,7 +7,7 @@ const {
   WellKnownJsonRes,
   // JsonResWriter,
 } = require('../../../../api/middleware/json-response-util');
-const { 
+const {
   BasicRead,
   // BasicWrite,
 } = require('../../../../api/middleware/crud');
@@ -38,15 +38,15 @@ exports.aggregate = (req, res, next) => {
         missingParams.add('plant');
       }
       if (!req.body.filter['ts-from']) {
-          missingParams.add('ts-from');
+        missingParams.add('ts-from');
       }
       if (!req.body.filter['ts-to']) {
         missingParams.add('ts-to');
       }
     }
     if (missingParams.size !== 0) {
-        WellKnownJsonRes.error(res, 400, [`missing required params: \'${[...missingParams].join('\', \'')}\'`]);
-        return;
+      WellKnownJsonRes.error(res, 400, [`missing required params: \'${[...missingParams].join('\', \'')}\'`]);
+      return;
     }
   }
 
@@ -78,7 +78,7 @@ exports.aggregate = (req, res, next) => {
     .exec()
     .then(findDriverResult => {
       if (!findDriverResult.length) {
-        WellKnownJsonRes.okMulti(res);
+        WellKnownJsonRes.okEmpty(res);
         return;
       }
 
@@ -105,9 +105,9 @@ exports.aggregate = (req, res, next) => {
       let aggregation = GenReadingOnPeriod.aggregate()
         .match(readingsFilter)
         .addFields({
-          tsg: { '$add': [ '$ts', -1000 ] }
+          tsg: { '$add': ['$ts', -1000] }
         })
-      ;
+        ;
 
       {
         const groupByPeriod = buildReadingsGrouping(req.params.period, req._q.proj)
@@ -125,11 +125,11 @@ exports.aggregate = (req, res, next) => {
       aggregation = aggregation
         .sort({ ts: 1 })
         .addFields(paramsByPeriod[req.params.period].buildTsFieldValue(req.body.filter['ts-from'], req.body.filter['ts-to']))
-    ;
+        ;
 
       if (JsonObjectHelper.isNotEmpty(req._q.sort)) {
         aggregation = aggregation.sort(req._q.sort);
-      }  
+      }
 
       if (JsonObjectHelper.isNotEmpty(req._q.proj)) {
         aggregation = aggregation.project(req._q.proj);
@@ -138,7 +138,7 @@ exports.aggregate = (req, res, next) => {
       BasicRead.aggregate(req, res, next, GenReadingOnPeriod, aggregation, req._q.skip, req._q.limit);
     })
     .catch(aggregateError => {
-      WellKnownJsonRes.error(res, 500, [ `error encountered on gen reading log aggregation`, aggregateError.message ]);
+      WellKnownJsonRes.error(res, 500, [`error encountered on gen reading log aggregation`, aggregateError.message]);
       return;
     });
 };
@@ -147,7 +147,7 @@ exports.aggregate = (req, res, next) => {
 //
 // private part
 
-const buildReadingsAggregation = () => { 
+const buildReadingsAggregation = () => {
   return {
     'ts': { '$max': '$ts' },
     'batt-t-in': { '$avg': '$b.t.in' },
@@ -180,7 +180,7 @@ const paramsByPeriod = {
             '$min': [
               {
                 '$dateFromParts': {
-                  year: { '$add': [ '$_id', 1 ] }
+                  year: { '$add': ['$_id', 1] }
                 }
               },
               { '$toDate': tsTo }
@@ -200,8 +200,8 @@ const paramsByPeriod = {
               {
                 '$dateFromParts': {
                   year: '$_id.y',
-                  month: '$_id.m',    
-                }  
+                  month: '$_id.m',
+                }
               }
             ]
           },
@@ -210,8 +210,8 @@ const paramsByPeriod = {
               {
                 '$dateFromParts': {
                   year: '$_id.y',
-                  month: { '$add': [ '$_id.m', 1 ] },
-                }  
+                  month: { '$add': ['$_id.m', 1] },
+                }
               },
               { '$toDate': tsTo }
             ]
@@ -240,8 +240,8 @@ const paramsByPeriod = {
               {
                 '$dateFromParts': {
                   isoWeekYear: '$_id.y',
-                  isoWeek: { '$add': [ '$_id.w', 1 ] },
-                }  
+                  isoWeek: { '$add': ['$_id.w', 1] },
+                }
               },
               { '$toDate': tsTo }
             ]
@@ -265,7 +265,7 @@ const paramsByPeriod = {
             '$dateFromParts': {
               year: '$_id.y',
               month: '$_id.m',
-              day: { '$add': [ '$_id.d', 1 ] },
+              day: { '$add': ['$_id.d', 1] },
             }
           }
         }
@@ -289,7 +289,7 @@ const paramsByPeriod = {
               year: '$_id.y',
               month: '$_id.m',
               day: '$_id.d',
-              hour: { '$add': [ '$_id.h', 1 ] },
+              hour: { '$add': ['$_id.h', 1] },
             }
           }
         }
