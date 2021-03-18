@@ -293,6 +293,29 @@ exports.generatePlantId = (target = { project: {} }) => {
   });
 }
 
+// other/totalConnectedAtDate
+exports.getConnectionDateList = (date = new Date(), plantIdsFilter = []) => new Promise((resolve, reject) => {
+  Plant.aggregate()
+    .match({
+      '_id': plantIdsFilter.length == 1
+        ? plantIdsFilter[0]
+        : { $in: plantIdsFilter },
+      'dates.business': {
+        $lte: date,
+      }
+    })
+    .group({
+      _id: '$dates.business',
+      c: { $sum: '$stats.total-connected-customers' },
+    })
+    .sort({
+      _id: 1,
+    })
+    .exec()
+    .then(aggregateResult => resolve(aggregateResult))
+    .catch(aggregateError => reject(aggregateError));
+});
+
 // DEPRECATED
 exports.aggregateDelivery = (
   period = 'daily',

@@ -31,17 +31,19 @@ exports.upload = (req, res, next) => {
       req.files.templates = [req.files.templates]
     }
 
+    const maxAllowedSize = (parseInt(process.env.WCH_STO_RPT_TMPL_MAX_UPLOAD_MB) << 20);
+
     // first loop: fill in basic response
     req.files.templates.forEach(templateUpload => {
       totalFiles++;
       uploadResult[templateUpload.name] = {
         stored: false
       };
-      if (!((process.env.WCH_STO_RPT_TMPL_ALLOW_MIMETYPES || '').split(/\s*,\s*/)).includes(templateUpload.mimetype.toLowerCase())) {
+      if (!dmsEngineContext.isSupportedMymeType(getTemplateKey(templateUpload.name), templateUpload.mimetype.toLowerCase())) {
         uploadResult[templateUpload.name].reason = `invalid ${templateUpload.mimetype} mimetype`;
         return;
       }
-      if (templateUpload.truncated === true || (templateUpload.size << 20) > process.env.WCH_STO_RPT_TMPL_MAX_UPLOAD_MB) {
+      if (templateUpload.truncated === true || templateUpload.size > maxAllowedSize) {
         uploadResult[templateUpload.name].reason = `files too large, max size allowed is ${process.env.WCH_STO_RPT_TMPL_MAX_UPLOAD_MB} MB`;
         return;
       }
@@ -110,30 +112,22 @@ exports.download = (req, res, next) => {
 //
 // private part
 
-const getTemplateFilePath = (uploadedTemplateFile) => {
-  return `${fsUtil.legacy.path.join(getTemplateBaseDir(uploadedTemplateFile), uploadedTemplateFile)}`;
+const getTemplateKey = (uploadedTemplateFile) => {
+  return uploadedTemplateFile.replace(/\.[^/.]+$/, '')
 }
 
-const getTemplateBaseDir = (uploadedTemplateFile) => {
-  const templateKey = uploadedTemplateFile.replace(/\.[^/.]+$/, '');
-  const holdCoCommWorkDir = dmsEngineContext.buildPathFromWorkDir(dmsEngineContext.basePathKey.HC_COMM, 'templates');
-  return ({
-    'mg-pot-cust': holdCoCommWorkDir,
-    'mg-onbrd-cust': holdCoCommWorkDir,
-    'mg-conn-cust': holdCoCommWorkDir,
-    'mg-day-cons': holdCoCommWorkDir,
-  })[templateKey]
-    || dmsEngineContext.buildPathFromRootDir('reporting', 'templates');
+const getTemplateFilePath = (uploadedTemplateFileName) => {
+  return `${fsUtil.legacy.path.join(getTemplateBaseDir(uploadedTemplateFileName), uploadedTemplateFileName)}`;
+}
+
+const getTemplateBaseDir = (uploadedTemplateFileName) => {
+  return dmsEngineContext.buildReportTemplatesBaseDirPath(getTemplateKey(uploadedTemplateFileName));
 }
 
 const emptyTempDir = () => dmsEngineContext.cleanWorkDirFiles(dmsEngineContext.basePathKey.TMP_UPLOADS);
 
 const listUploadDirFiles = () => new Promise((resolve, reject) => {
-  Promise.all([
-    dmsEngineContext.listWorkDirFiles(dmsEngineContext.basePathKey.HC_COMM, 'templates'),
-    dmsEngineContext.listWorkDirFiles(dmsEngineContext.basePathKey.HC_OM, 'templates'),
-    dmsEngineContext.listRootDirFiles('reporting', 'templates'),
-  ])
+  Promise.all(dmsEngineContext.buildReportTemplatesListAsyncTasks())
     .then(promiseAllResult => {
       resolve([
         ...promiseAllResult[0],

@@ -1,7 +1,6 @@
 const {
   Handler,
-} = require('../../../../../../../api/lib/util/handler');
-
+} = require('../../../../../../../api/lib/util/handler')
 
 const {
   initExcelJS,
@@ -9,11 +8,18 @@ const {
   buildPortraitPageSetup,
 } = require('../../../xls');
 
+// TODO
+// const {
+//   NumberFormatter,
+//   DateFormatter,
+// } = require('../../../../../../../api/lib/util/formatter')
+// TODO other internal lib here
+
 
 const { loadDmsInstance } = require('../util');
 
 
-class MgConnCustHandler extends Handler {
+class OmGenfacOpHandler extends Handler {
   constructor () {
     super();
   }
@@ -26,7 +32,6 @@ class MgConnCustHandler extends Handler {
         const dmsInstance = loadDmsInstance(context);
         const dmsEngineContext = dmsInstance.context;
 
-        //
         // 1b. init processing resources
         const ExcelJS = initExcelJS();
         const workbook = new ExcelJS.Workbook();
@@ -34,11 +39,12 @@ class MgConnCustHandler extends Handler {
         //
         // 3. return report resource
         resolve(
+          // 
           // 2. fill in report resource
           workbook.xlsx.readFile(dmsEngineContext.buildPathFromWorkDir(
-            dmsEngineContext.basePathKey.HC_COMM,
+            dmsEngineContext.basePathKey.HC_OM,
             ...dmsEngineContext.pathSegment.oReport.oHc.vTemplate,
-            'mg-conn-cust.xlsx'))
+            'om-genfac-op.xlsx'))
             .then(workbook => new Promise((resolve, reject) => {
               buildBasicDocumentOption(workbook);
               buildPortraitPageSetup(workbook);
@@ -54,4 +60,4 @@ class MgConnCustHandler extends Handler {
 }
 
 
-module.exports = MgConnCustHandler;
+module.exports = OmGenfacOpHandler;

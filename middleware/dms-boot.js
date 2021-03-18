@@ -25,7 +25,7 @@ exports.boot = () => new Promise((resolve, reject) => {
         oHc: {
           vTemplate: ['templates'],
           fGenerated: function (year, month, ...subPathSegments) {
-            return ['repo', year.toString(), month.toString().padStart(2, '0'), ...subPathSegments]
+            return ['repo', year.toString(), month.toString().padStart(2, '0'), ...subPathSegments];
           }
         }
       }
@@ -39,7 +39,7 @@ exports.boot = () => new Promise((resolve, reject) => {
     cleanWorkDirFiles: function (basePathKey, ...subPathSegments) {
       return fsUtil.emptyDir(this.buildPathFromWorkDir(basePathKey, ...subPathSegments));
     },
-    createRootDirSubPath: function (basePathKey, isFile, ...subPathSegments) {
+    createRootDirSubPath: function (isFile, ...subPathSegments) {
       let path = this.buildPathFromRootDir(...subPathSegments);
       if (isFile === true) {
         path = fsUtil.legacy.path.dirname(path);
@@ -58,6 +58,44 @@ exports.boot = () => new Promise((resolve, reject) => {
     },
     listWorkDirFiles: function (basePathKey, ...subPathSegments) {
       return fsUtil.listDirFiles(this.buildPathFromWorkDir(basePathKey, ...subPathSegments));
+    },
+    buildReportTemplatesListAsyncTasks () {
+      return [
+        this.listWorkDirFiles(this.basePathKey.HC_COMM, ...this.pathSegment.oReport.oHc.vTemplate),
+        this.listWorkDirFiles(this.basePathKey.HC_OM, ...this.pathSegment.oReport.oHc.vTemplate),
+        this.listRootDirFiles(...this.pathSegment.oReport.vTemplate),
+      ]
+    },
+    getBasePathKey: function (templateKey) {
+      return ({
+        'mg-pot-cust': this.basePathKey.HC_COMM,
+        'mg-onbrd-cust': this.basePathKey.HC_COMM,
+        'mg-conn-cust': this.basePathKey.HC_COMM,
+        'mg-day-cons': this.basePathKey.HC_COMM,
+        'om-genfac-op': this.basePathKey.HC_OM,
+        'om-batt-op': this.basePathKey.HC_OM,
+      })[templateKey];
+    },
+    buildReportTemplatesBaseDirPath: function (templateKey) {
+      return this.buildPathFromWorkDir(this.getBasePathKey(templateKey), ...this.pathSegment.oReport.oHc.vTemplate)
+        || this.buildPathFromRootDir(...this.pathSegment.oReport.vTemplate)
+    },
+    getReportTemplatesAllowedMimeTypes: function () {
+      return (process.env.WCH_STO_RPT_TMPL_ALLOW_MIMETYPES || '').split(/\s*,\s*/);
+    },
+    isSupportedMymeType: function (templateKey, mimeType) {
+      const reportTemplatesAllowedMimeTypes = this.getReportTemplatesAllowedMimeTypes();
+      const wellKnownMiMeTypes = ({
+        'mg-pot-cust': reportTemplatesAllowedMimeTypes,
+        'mg-onbrd-cust': reportTemplatesAllowedMimeTypes,
+        'mg-conn-cust': reportTemplatesAllowedMimeTypes,
+        'mg-day-cons': reportTemplatesAllowedMimeTypes,
+        'om-genfac-op': reportTemplatesAllowedMimeTypes,
+        'om-batt-op': reportTemplatesAllowedMimeTypes,
+      })[templateKey] || [
+          ...reportTemplatesAllowedMimeTypes
+        ];
+      return wellKnownMiMeTypes.includes(mimeType);
     },
   };
   dms.bootInstance(dmsEngineKey, new LocalFsDmsEngine(), context);

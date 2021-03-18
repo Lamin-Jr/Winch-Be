@@ -11,7 +11,9 @@ exports.bootReportRecipes = (slug, registry) => {
 
   handlerType = 'om'
 
-  // TODO om report recipes
+  registryRef = 'om-genfac-op'
+  HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
+  registry.boot(registryRef, new HandlerClass());
 }
 
 exports.bootXlsRecipes = (slug, registry) => {
@@ -27,5 +29,7 @@ exports.bootXlsRecipes = (slug, registry) => {
 
   handlerType = 'om'
 
-  // TODO om xls recipes
+  registryRef = 'om-genfac-op'
+  HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
+  registry.boot(registryRef, new HandlerClass());
 }

@@ -19,6 +19,7 @@ const setAppName = require('../../middleware/rest/set-app-name');
 router.post('/filter-items', checkAuth, setAppName, retrieveUserProfile, PlantCounterCtrl.filterItems);
 
 router.post('/e-customers', checkAuth, setAppName, retrieveUserProfile, PlantCounterCtrl.eCustomers);
+router.post('/e-customers/:period(all|daily|weekly|monthly|yearly)', checkAuth, setAppName, retrieveUserProfile, PlantCounterCtrl.eCustomersByPeriod);
 
 
 module.exports = router;

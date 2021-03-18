@@ -10,8 +10,7 @@ const {
 const localUtil = require('../util');
 
 
-// TODO apply 'TemplateHandler' replacement (2+1_temp tokens)
-class TemplateHandler extends Handler {
+class OmGenfacOpHandler extends Handler {
   constructor () {
     super();
   }
@@ -20,17 +19,13 @@ class TemplateHandler extends Handler {
     return new Promise((resolve, reject) => {
       try {
         // TODO:
-        // 0. test working with following, then delete and code!
-        console.log('TemplateHandler (recipe)', context);
-
-        // TODO:
         // 1. prepare data for relevant report resource handler
         localUtil.applyConventionOverConfiguration(context);
 
-        // TODO:
+        // TODO
         // 2. call report resource handler
         const xlsReportHandlersRegistry = require('../../../xls-report-handlers-registry');
-        xlsReportHandlersRegistry.handle("<TODO: replace with template slug>", {
+        xlsReportHandlersRegistry.handle('om-genfac-op', {
           in: context,
         })
           // 
@@ -40,7 +35,7 @@ class TemplateHandler extends Handler {
             {
               notifications: context.notifications,
               period: context.selection.period,
-              templateKey: "<TODO: replace with template slug>",
+              templateKey: 'om-genfac-op',
             }
           ))
           .then(notifyResult => {
@@ -59,7 +54,7 @@ class TemplateHandler extends Handler {
 }
 
 
-module.exports = TemplateHandler;
+module.exports = OmGenfacOpHandler;
 
 //
 // private part

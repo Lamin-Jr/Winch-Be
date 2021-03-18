@@ -11,9 +11,7 @@ const {
 //   buildPlantFilters,
 //   buildPlantFiltersRepo
 // } = require('../../../../controllers/plant/_shared');
-const {
-  applyConventionOverConfiguration
-} = require('../util');
+const localUtil = require('../util');
 
 
 class MgConnCustHandler extends Handler {
@@ -24,10 +22,12 @@ class MgConnCustHandler extends Handler {
   handle (context) {
     return new Promise((resolve, reject) => {
       try {
-        // prepare data for relevant report resource handler
-        applyConventionOverConfiguration(context);
+        // TODO:
+        // 1. prepare data for relevant report resource handler
+        localUtil.applyConventionOverConfiguration(context);
 
-        // call report resource handler
+        //
+        // 2. call report resource handler
         const xlsReportHandlersRegistry = require('../../../xls-report-handlers-registry');
         xlsReportHandlersRegistry.handle('mg-conn-cust', {
           in: context,
@@ -59,24 +59,24 @@ class MgConnCustHandler extends Handler {
           // eForecast: promiseAllResult[10],
           // battForecast: promiseAllResult[9],
         })
-          // notify report resource
-          .then(xlsMaker => notifyAll(
+          // 
+          // 3. notify report resource
+          .then(xlsMaker => localUtil.notifyAll(
             xlsMaker,
             {
               notifications: context.notifications,
               period: context.selection.period,
+              templateKey: 'mg-conn-cust',
             }
           ))
           .then(notifyResult => {
             if (notifyResult.status === 200) {
               resolve();
             } else {
-              const error = new Error(`unable to notify report, ${notifyResult.errors.length} error${notifyResult.errors.length !== 1 ? 's' : ''} encountered`);
-              error.status = notifyResult.status;
-              reject(error);
+              reject(localUtil.buildNotifyError(notifyResult));
             }
           })
-          .catch(error => reject(error))
+          .catch(error => reject(error));
       } catch (error) {
         reject(error);
       }
@@ -86,66 +86,6 @@ class MgConnCustHandler extends Handler {
 
 //
 // private part 
-
-const notifyAll = (xlsMaker, localContext) => new Promise((resolve, reject) => {
-  Promise.all(localContext.notifications.map(notification => notify(xlsMaker, { notification, period: localContext.period })))
-    .then(promiseAllResult => {
-      notifyResult = {
-        status: 200,
-        errors: [],
-      }
-      promiseAllResult.forEach((promiseResult, index) => {
-        if (!promiseResult.outcome) {
-          notifyResult.errors.push({
-            notification: index,
-            error: promiseResult.error
-          });
-        }
-      });
-      if (notifyResult.errors.length) {
-        notifyResult.status = notifyResult.errors.length === promiseAllResult.length
-          ? 500
-          : 409;
-      }
-      resolve(notifyResult);
-    })
-    .catch(error => reject(error))
-});
-
-const notify = (xlsMaker, localContext) => new Promise((resolve, reject) => {
-  try {
-    const dmsInstance = require("../../../dms")
-      .getInstance(localContext.notification.address.substring('winch://dms/'.length));
-    if (!dmsInstance) {
-      const error = new Error(`unsupported report recipient, fix it!`);
-      error.status = 500;
-      resolve({
-        outcome: false,
-        error,
-      });
-    }
-    const basePathKey = dmsInstance.context.basePathKey.HC_COMM;
-    const subPathSegments = dmsInstance.context.pathSegment.oReport.oHc.fGenerated(2021, 1);
-    dmsInstance.context.createWorkDirSubPath(basePathKey, false, ...subPathSegments)
-      .then(dirPath => {
-        setTimeout(() => {
-          return xlsMaker.writeFile(dmsInstance.context.buildPathFromWorkDir(basePathKey, ...subPathSegments, 'mg-conn-cust' + '.xlsx'));
-        }, 100 * subPathSegments.length);
-      })
-      .then(() => resolve({
-        outcome: true,
-      }))
-      .catch(error => resolve({
-        outcome: false,
-        error,
-      }));
-  } catch (error) {
-    resolve({
-      outcome: false,
-      error,
-    });
-  }
-});
 
 
 // TODO
