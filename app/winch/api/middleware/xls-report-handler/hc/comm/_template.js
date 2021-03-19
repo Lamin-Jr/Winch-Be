@@ -13,13 +13,13 @@ const {
 //   NumberFormatter,
 //   DateFormatter,
 // } = require('../../../../../../../api/lib/util/formatter')
-// TODO other internal lib here
+// TODO: other internal lib here
 
 
 const { loadDmsInstance } = require('../util');
 
 
-// TODO apply 'TemplateHandler' replacement (2+1_temp tokens)
+// TODO: apply 'TemplateHandler' replacement (2+1_temp tokens)
 class TemplateHandler extends Handler {
   constructor () {
     super();

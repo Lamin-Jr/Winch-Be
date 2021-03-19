@@ -1,3 +1,4 @@
+const ownHandlersRegistriesBoot = require('./handlers-registries-boot/own-reporting');
 const holdCoHandlersRegistriesBoot = require('./handlers-registries-boot/hc-reporting');
 
 exports.boot = () => {
@@ -14,7 +15,9 @@ exports.boot = () => {
   reportRecipeHandlersRegistry.boot(registryRef, new HandlerClass());
   registryRef = 'summary-base'
   HandlerClass = require(`../app/winch/api/middleware/${handlerSlug}-handler/${registryRef}`);
+  reportRecipeHandlersRegistry.boot(registryRef, new HandlerClass());
   // report recipe - boot imported
+  ownHandlersRegistriesBoot.bootReportRecipes(handlerSlug, reportRecipeHandlersRegistry);
   holdCoHandlersRegistriesBoot.bootReportRecipes(handlerSlug, reportRecipeHandlersRegistry);
 
   //
@@ -33,5 +36,6 @@ exports.boot = () => {
   handlerSlug = 'xls-report';
   const xlsReportHandlersRegistry = require(`../app/winch/api/middleware/${handlerSlug}-handlers-registry`);
   // xml report - boot imported
+  ownHandlersRegistriesBoot.bootXlsRecipes(handlerSlug, xlsReportHandlersRegistry);
   holdCoHandlersRegistriesBoot.bootXlsRecipes(handlerSlug, xlsReportHandlersRegistry);
 };

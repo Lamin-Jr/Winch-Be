@@ -47,7 +47,7 @@ exports.notify_by_handler_id = (req, res, next) => {
           WellKnownJsonRes.created(res);
         })
         .catch(handleError => {
-          WellKnownJsonRes.errorDebug(res, handleError);
+          WellKnownJsonRes.error(res, handleError.status || 500, [handleError.message]);
         });
     })
     .catch((readError) => {

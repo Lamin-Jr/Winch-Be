@@ -22,6 +22,11 @@ exports.boot = () => new Promise((resolve, reject) => {
     pathSegment: {
       oReport: {
         vTemplate: ['reporting', 'templates'],
+        oOwn: {
+          fGenerated: function (project, ...subPathSegments) {
+            return ['projects', project, ...subPathSegments];
+          },
+        },
         oHc: {
           vTemplate: ['templates'],
           fGenerated: function (year, month, ...subPathSegments) {
