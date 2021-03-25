@@ -51,7 +51,7 @@ class ProjectOverviewHandler extends Handler {
           eDelivFilter.tsTo = context.selection.period.to;
         }
         Promise.all([
-          // Promise #0) plants and relevant e-delivery query task
+          // Promise #0.0) plants and relevant e-delivery query task
           PlantCtrl.filteredPlants(
             plantFilters.plantsFilter,
             plantFilters.plantsStatusFilter,
@@ -104,6 +104,7 @@ class ProjectOverviewHandler extends Handler {
             xlsReportHandlersRegistry.handle('project-overview', {
               in: context,
               data: {
+                // Promise #0.0) plants and relevant e-delivery query task
                 plant: promiseAllResult[0],
               },
             })

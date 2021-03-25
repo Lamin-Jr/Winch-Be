@@ -14,37 +14,22 @@ exports.applyConventionOverConfiguration = (context) => {
 
   context.selection = context.selection || {
     plant: {
-
     },
     period: {
     }
   };
 
   context.selection.plant = context.selection.plant || {};
-
-  if (!context.selection.period || !context.selection.period.from || !context.selection.period.to) {
-    const dateFormatter = DateFormatter.buildISOZoneDateFormatter();
-    const endMonthRef = new Date(
-      new Date(
-        // endDateRef
-        new Date(context.selection.period.to || DateFormatter.formatDateOrDefault(new Date(), dateFormatter))
-      ).setDate(1)
-    );
-
-    context.selection.period.from = DateFormatter.formatDateOrDefault(new Date(new Date(endMonthRef).setMonth(endMonthRef.getMonth() - 1)), dateFormatter);
-    // FIXME // this calculate first outer day (1st next month) // context.selection.period.to = DateFormatter.formatDateOrDefault(endMonthRef, dateFormatter);
-    context.selection.period.to = DateFormatter.formatDateOrDefault(new Date(new Date(endMonthRef).setDate(endMonthRef.getDate() - 1)), dateFormatter);
-  }
 }
 
-exports.notifyAll = (xlsMaker, localContext) => new Promise((resolve, reject) => {
-  Promise.all(localContext.notifications.map(notification => notify(xlsMaker, {
+exports.notifyAll = (xlsOutContextList, localContext) => new Promise((resolve, reject) => {
+  Promise.all(xlsOutContextList.map(xlsOutContext => Promise.all(localContext.notifications.map(notification => notify(xlsOutContext.xlsMaker, {
     notification,
-    period: localContext.period,
+    period: xlsOutContext.period,
     templateKey: localContext.templateKey,
   })))
-    .then(promiseAllResult => {
-      notifyResult = {
+    .then(promiseAllResult => new Promise(resolve => {
+      const notifyResult = {
         status: 200,
         errors: [],
       }
@@ -62,6 +47,31 @@ exports.notifyAll = (xlsMaker, localContext) => new Promise((resolve, reject) =>
           : 409;
       }
       resolve(notifyResult);
+    }))
+    .catch(error => reject(error))
+  ))
+    .then(promiseAllResult => {
+      if (promiseAllResult.length === 1) {
+        resolve(promiseAllResult[0]);
+        return;
+      }
+      const notifyResult = {
+        status: 200,
+        errors: [],
+      }
+      let errorCounter = 0;
+      promiseAllResult.forEach((promiseResult, index) => {
+        if (promiseResult.status !== 200) {
+          errorCounter++;
+        }
+        notifyResult.errors.push(...promiseResult.errors);
+      });
+      if (notifyResult.errors.length) {
+        notifyResult.status = errorCounter === promiseAllResult.length
+          ? 500
+          : 409;
+      }
+      resolve(notifyResult);
     })
     .catch(error => reject(error))
 });
@@ -71,6 +81,34 @@ exports.buildNotifyError = (notifyResult) => {
   error.status = notifyResult.status;
   return error
 }
+
+exports.buildPeriodFilter = (context, businessStartDate, now = new Date()) => {
+  const actualPeriodFrom = getActualPeriodFrom(
+    context.selection.period.from
+      ? new Date(context.selection.period.from)
+      : now,
+    businessStartDate,
+    now
+  );
+  const actualPeriodTo = getActualPeriodTo(
+    context.selection.period.to
+      ? new Date(context.selection.period.to)
+      : now,
+    businessStartDate,
+    now
+  );
+
+  if (actualPeriodFrom === null || actualPeriodTo === null
+    || actualPeriodFrom.getTime() > actualPeriodTo.getTime()) {
+    return queryPeriods;
+  }
+
+  return {
+    tsFrom: new Date(new Date(actualPeriodFrom).setDate(1)),
+    tsTo: actualPeriodTo,
+  }
+}
+
 
 //
 // private part
@@ -88,7 +126,8 @@ const notify = (xlsMaker, localContext) => new Promise((resolve, reject) => {
       });
     }
     const basePathKey = dmsInstance.context.getBasePathKey(localContext.templateKey);
-    const subPathSegments = dmsInstance.context.pathSegment.oReport.oHc.fGenerated(2021, 1);
+    const periodAsDate = new Date(localContext.period);
+    const subPathSegments = dmsInstance.context.pathSegment.oReport.oHc.fGenerated(periodAsDate.getFullYear(), periodAsDate.getMonth() + 1);
     dmsInstance.context.createWorkDirSubPath(basePathKey, false, ...subPathSegments)
       .then(dirPath => {
         setTimeout(() => {
@@ -109,3 +148,19 @@ const notify = (xlsMaker, localContext) => new Promise((resolve, reject) => {
     });
   }
 });
+
+const getActualPeriodFrom = (inputDate, businessStartDate, now = new Date()) => {
+  return !inputDate || businessStartDate.getTime() > inputDate.getTime()
+    ? businessStartDate
+    : now.getTime() > inputDate.getTime()
+      ? inputDate
+      : null;
+}
+
+const getActualPeriodTo = (inputDate, businessStartDate, now = new Date()) => {
+  return !inputDate || inputDate.getTime() > now.getTime()
+    ? now
+    : inputDate.getTime() >= businessStartDate.getTime()
+      ? inputDate
+      : null;
+}

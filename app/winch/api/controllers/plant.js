@@ -295,23 +295,40 @@ exports.generatePlantId = (target = { project: {} }) => {
 
 // other/totalConnectedAtDate
 exports.getConnectionDateList = (date = new Date(), plantIdsFilter = []) => new Promise((resolve, reject) => {
-  Plant.aggregate()
-    .match({
-      '_id': plantIdsFilter.length == 1
-        ? plantIdsFilter[0]
-        : { $in: plantIdsFilter },
-      'dates.business': {
-        $lte: date,
-      }
+  const actualPlantIdsFilter = {
+    '_id': plantIdsFilter.length == 1
+      ? plantIdsFilter[0]
+      : { $in: plantIdsFilter },
+  };
+
+  Plant.distinct('stats.commCat', actualPlantIdsFilter).exec()
+    .then(distinctResult => {
+      const groupStatement = {
+        _id: '$dates.business',
+        c: { $sum: '$stats.total-connected-customers' },
+      };
+
+      const commCategories = new Set();
+      distinctResult.forEach(commCatGroup => {
+        Object.keys(commCatGroup).forEach(commCat => commCategories.add(commCat));
+      });
+      commCategories.forEach(commCat => {
+        groupStatement[commCat] = { $sum: `$stats.commCat.${commCat}` };
+      });
+
+      return Plant.aggregate()
+        .match({
+          ...actualPlantIdsFilter,
+          'dates.business': {
+            $lte: date,
+          }
+        })
+        .group(groupStatement)
+        .sort({
+          _id: 1,
+        })
+        .exec();
     })
-    .group({
-      _id: '$dates.business',
-      c: { $sum: '$stats.total-connected-customers' },
-    })
-    .sort({
-      _id: 1,
-    })
-    .exec()
     .then(aggregateResult => resolve(aggregateResult))
     .catch(aggregateError => reject(aggregateError));
 });

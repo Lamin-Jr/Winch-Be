@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const PlantCtrl = require('../../controllers/plant');
 
-// const {
-//   DateFormatter,
-// } = require('../../../../../api/lib/util/formatter');
+const {
+  DateFormatter,
+} = require('../../../../../api/lib/util/formatter');
 // const {
 //   // JsonObjectTypes,
 //   JsonObjectHelper,
@@ -73,237 +73,283 @@ exports.filterItems = (req, res, next) => {
     .catch(readError => WellKnownJsonRes.errorDebug(res, readError));
 }
 
-// cRud/eCustomers
-exports.eCustomers = (req, res, next) => {
-  const plantFiltersRepo = buildPlantFiltersRepo(req.body.filter, true);
-
-  PlantCtrl.filteredEDelivDriverPlants(plantFiltersRepo.plantsFilter, plantFiltersRepo.plantsStatusFilter, plantFiltersRepo.plantsLocationsFilter)
-    .then(readResult => {
-      if (!readResult.length) {
-        WellKnownJsonRes.okSingle(res, {
-          consuming: 0,
-          working: 0,
-        });
-        return;
-      } else if (readResult.length !== 1) {
-        WellKnownJsonRes.notImplemented(res, 'unable to query more than one driver at once');
-        return;
+// cRud/eCustomersByPeriod
+exports.eCustomersByPeriod = (req, res, next) => {
+  exports.aggregateECustomersByPeriod(
+    req.params.period,
+    req.body.filter,
+    req.body.context,
+  )
+    .then(eCustomerCounters => {
+      WellKnownJsonRes.okMulti(res, eCustomerCounters.length, eCustomerCounters);
+    })
+    .catch(readError => {
+      if (readError.status) {
+        WellKnownJsonRes.error(res, readError.status, [readError.message])
+      } else {
+        WellKnownJsonRes.errorDebug(res, readError)
       }
+    });
+};
 
-      Object.assign(plantFiltersRepo.targetFilter, {
-        '_id.m': readResult[0].plants.length == 1
-          ? readResult[0].plants[0]
-          : { $in: readResult[0].plants },
-      });
 
-      // perform actual aggregation
-      //
-      const schema = require(`../../../api/schemas/readings/customer-daily-log`);
-      const CustomerPeriodModel = require('../../middleware/mongoose-db-conn').driverDBConnRegistry
-        .get(readResult[0]._id)
-        .model(`CustomerDaily`, schema);
-      const aggregation = CustomerPeriodModel.aggregate()
-        .match(plantFiltersRepo.targetFilter)
-        .group({
-          _id: {
-            pod: '$pod',
-            d: '$d'
-          },
-          consuming: {
+//
+// utils
+
+exports.aggregateECustomersByPeriod = (
+  period = 'all',
+  filter = {},
+  context = {
+    aggregator: undefined,
+  },
+) => {
+  return new Promise((resolve, reject) => {
+    const plantFiltersRepo = buildPlantFiltersRepo(filter, true);
+
+    PlantCtrl.filteredEDelivDriverPlants(plantFiltersRepo.plantsFilter, plantFiltersRepo.plantsStatusFilter, plantFiltersRepo.plantsLocationsFilter)
+      .then(readResult => {
+        if (!readResult.length) {
+          const error = new Error('selection did not result in any plant');
+          error.status = 404;
+          reject(error);
+          return;
+        } else if (readResult.length !== 1) {
+          const error = new Error('unable to query more than one driver at once');
+          error.status = 501;
+          reject(error);
+          return;
+        }
+
+        Object.assign(plantFiltersRepo.targetFilter, {
+          '_id.m': readResult[0].plants.length == 1
+            ? readResult[0].plants[0]
+            : { $in: readResult[0].plants },
+        });
+
+        // perform actual aggregations
+        //
+        const isAllPeriod = period === 'all'
+        const periodModelSelector = isAllPeriod
+          ? 'daily'
+          : period;
+
+        const schema = require(`../../../api/schemas/readings/customer-${periodModelSelector}-log`);
+        const CustomerPeriodModel = require('../../middleware/mongoose-db-conn').driverDBConnRegistry
+          .get(readResult[0]._id)
+          .model(`Customer${periodModelSelector.charAt(0).toUpperCase() + periodModelSelector.slice(1)}`, schema);
+
+        const operationalsGroupStatement = {
+          _id: isAllPeriod
+            ? {
+              pod: '$pod',
+              d: '$ts'
+            }
+            : buildDeliveryGroupId(
+              period,
+              {
+                aggregator: context.aggregator || undefined,
+                'exchange-rate': undefined,
+                'show-pods': false
+              }),
+          consumingBySelling: {
             $sum: {
               $cond: [{ $gt: ['$es', 0.0] }, 1, 0]
             }
           },
-          working: { $sum: 1 },
-        })
-        .group({
-          _id: '$_id.d',
-          consuming: { $sum: '$consuming' },
-          working: { $sum: '$working' },
-        })
-        .sort({
-          _id: 1,
-        })
-        //
-        ;
-
-      aggregation
-        .then(readResult => {
-          WellKnownJsonRes.okMulti(res, readResult.length, readResult);
-        })
-        .catch(readError => WellKnownJsonRes.errorDebug(res, readError));
-    })
-    .catch(readError => WellKnownJsonRes.errorDebug(res, readError));
-};
-
-// cRud/eCustomersByPeriod
-exports.eCustomersByPeriod = (req, res, next) => {
-  const plantFiltersRepo = buildPlantFiltersRepo(req.body.filter, true);
-
-  PlantCtrl.filteredEDelivDriverPlants(plantFiltersRepo.plantsFilter, plantFiltersRepo.plantsStatusFilter, plantFiltersRepo.plantsLocationsFilter)
-    .then(readResult => {
-      if (!readResult.length) {
-        WellKnownJsonRes.okSingle(res, {
-          consuming: 0,
-          working: 0,
-          total: 0,
-        });
-        return;
-      } else if (readResult.length !== 1) {
-        WellKnownJsonRes.notImplemented(res, 'unable to query more than one driver at once');
-        return;
-      }
-
-      Object.assign(plantFiltersRepo.targetFilter, {
-        '_id.m': readResult[0].plants.length == 1
-          ? readResult[0].plants[0]
-          : { $in: readResult[0].plants },
-      });
-
-      // perform actual aggregations
-      //
-      const period = req.params.period;
-      const isAllPeriod = period === 'all'
-      const periodModelSelector = isAllPeriod
-        ? 'daily'
-        : period;
-
-      const schema = require(`../../../api/schemas/readings/customer-${periodModelSelector}-log`);
-      const CustomerPeriodModel = require('../../middleware/mongoose-db-conn').driverDBConnRegistry
-        .get(readResult[0]._id)
-        .model(`Customer${periodModelSelector.charAt(0).toUpperCase() + periodModelSelector.slice(1)}`, schema);
-
-      const operationalsGroupStatement = {
-        _id: isAllPeriod
-          ? {
-            pod: '$pod',
-            d: '$ts'
-          }
-          : buildDeliveryGroupId(
-            req.params.period,
-            {
-              aggregator: req.body.context ? req.body.context.aggregator : undefined,
-              'exchange-rate': undefined,
-              'show-pods': false
-            }),
-        consumingBySelling: {
-          $sum: {
-            $cond: [{ $gt: ['$es', 0.0] }, 1, 0]
-          }
-        },
-        consumingByService: {
-          $sum: {
-            $cond: [{ $gt: ['$ep', 0.0] }, 1, 0]
-          }
-        },
-      };
-      if (isAllPeriod || req.body.context.aggregator !== 'customers') {
-        operationalsGroupStatement.working = { $sum: 1 };
-      }
-
-      let operationalsAggregation = CustomerPeriodModel.aggregate()
-        .match(plantFiltersRepo.targetFilter)
-        .group(operationalsGroupStatement)
-        //
-        ;
-
-      if (isAllPeriod) {
-        operationalsAggregation = operationalsAggregation
-          .group({
-            _id: '$_id.d',
-            consumingBySelling: { $sum: '$consumingBySelling' },
-            consumingByService: { $sum: '$consumingByService' },
-            working: { $sum: '$working' },
-          })
-          .group({
-            _id: null,
-            b: {
-              $min: '$_id'
-            },
-            e: {
-              $max: '$_id'
-            },
-            sampledDays: { $sum: 1 },
-            totalDays: { $sum: 1 },
-            minConsumingBySelling: { $min: '$consumingBySelling' },
-            avgConsumingBySellingAvg: { $avg: '$consumingBySelling' },
-            maxConsumingBySellingMax: { $max: '$consumingBySelling' },
-            minConsumingByService: { $min: '$consumingByService' },
-            avgConsumingByService: { $avg: '$consumingByService' },
-            maxConsumingByService: { $max: '$consumingByService' },
-            minWorking: { $min: '$working' },
-            avgWorking: { $avg: '$working' },
-            maxWorking: { $max: '$working' },
-          })
-          .addFields({
-            totalDays: {
-              $sum: [{ $divide: [{ $subtract: ['$e', '$b'] }, 1000 * 60 * 60 * 24] }, 1]
+          consumingByService: {
+            $sum: {
+              $cond: [{ $gt: ['$ep', 0.0] }, 1, 0]
             }
-          })
+          },
+        };
+        if (isAllPeriod || context.aggregator !== 'customers') {
+          operationalsGroupStatement.working = { $sum: 1 };
+        }
+
+        let operationalsAggregation = CustomerPeriodModel.aggregate()
+          .match(plantFiltersRepo.targetFilter)
+          .group(operationalsGroupStatement)
           //
           ;
-      }
 
-      operationalsAggregation = operationalsAggregation
-        .sort(buildDeliverySorting(period, req.body.context))
-        //
-        ;
-
-      operationalsAggregation = operationalsAggregation
-        .allowDiskUse(true)
-        //
-        ;
-
-      Promise.all([
-        operationalsAggregation,
-        PlantCtrl.getConnectionDateList(new Date(req.body.filter.tsTo), readResult[0].plants),
-      ])
-        .then(promiseAllResult => {
-          if (promiseAllResult[0].length && req.body.context.aggregator === undefined) {
-            const totalConnectedStatus = {
-              i: null,
-              c: 0,
-              lastItem: false,
-              getTime: function () {
-                return this.i === null ? null : promiseAllResult[1][this.i]._id;
+        if (isAllPeriod) {
+          operationalsAggregation = operationalsAggregation
+            .group({
+              _id: '$_id.d',
+              consumingBySelling: { $sum: '$consumingBySelling' },
+              consumingByService: { $sum: '$consumingByService' },
+              working: { $sum: '$working' },
+            })
+            .group({
+              _id: null,
+              b: {
+                $min: '$_id'
               },
-              nextStatus: function () {
-                if (this.i === null || this.lastItem) {
-                  return false;
-                }
-                this.c += promiseAllResult[1][this.i].c;
-                if (promiseAllResult[1].length === this.i + 1) {
-                  this.lastItem = true;
-                  return false;
-                }
-                this.i++;
-                return true;
+              e: {
+                $max: '$_id'
+              },
+              sampledDays: { $sum: 1 },
+              totalDays: { $sum: 1 },
+              minConsumingBySelling: { $min: '$consumingBySelling' },
+              avgConsumingBySellingAvg: { $avg: '$consumingBySelling' },
+              maxConsumingBySellingMax: { $max: '$consumingBySelling' },
+              minConsumingByService: { $min: '$consumingByService' },
+              avgConsumingByService: { $avg: '$consumingByService' },
+              maxConsumingByService: { $max: '$consumingByService' },
+              minWorking: { $min: '$working' },
+              avgWorking: { $avg: '$working' },
+              maxWorking: { $max: '$working' },
+            })
+            .addFields({
+              totalDays: {
+                $sum: [{ $divide: [{ $subtract: ['$e', '$b'] }, 1000 * 60 * 60 * 24] }, 1]
               }
-            };
-            if (promiseAllResult[1].length) {
-              totalConnectedStatus.d = promiseAllResult[1][0]._id;
-              totalConnectedStatus.i = 0;
-            }
-            promiseAllResult[0].forEach(countSample => {
-              if (totalConnectedStatus.i === null) {
-                countSample['connected'] = 0;
-              } else {
-                const rawSampleDate = periodModelSelector === 'daily'
-                  ? countSample._id
-                  : countSample._id.e;
-                const sampleDate = new Date(rawSampleDate);
-                while (sampleDate.getTime() >= totalConnectedStatus.getTime() || rawSampleDate === null) {
-                  if (!totalConnectedStatus.nextStatus()) {
-                    break;
+            })
+            //
+            ;
+        }
+
+        operationalsAggregation = operationalsAggregation
+          .sort(buildDeliverySorting(period, context))
+          //
+          ;
+
+        operationalsAggregation = operationalsAggregation
+          .allowDiskUse(true)
+          //
+          ;
+
+        Promise.all([
+          operationalsAggregation,
+          PlantCtrl.getConnectionDateList(new Date(filter.tsTo), readResult[0].plants),
+        ])
+          .then(promiseAllResult => {
+            if (promiseAllResult[0].length && context.aggregator !== 'customers') {
+              const isDailyModel = periodModelSelector === 'daily';
+              // avoid huge response with trivial data
+              // if needed, remove second term of root boolean expression and uncomment below
+              // const isAggregatedByCustomers = context.aggregator === 'customers';
+              const disabledAggregator = context.aggregator === undefined;
+              const isAggregatedByCategories = context.aggregator === 'categories';
+              const totalConnectedStatus = {
+                i: null,
+                c: 0,
+                lastItem: false,
+                getTime: function () {
+                  return this.i === null ? null : promiseAllResult[1][this.i]._id;
+                },
+                nextStatus: function () {
+                  if (this.i === null || this.lastItem) {
+                    return false;
+                  }
+                  this.c += promiseAllResult[1][this.i].c;
+                  if (isAggregatedByCategories) {
+                    Object.entries(promiseAllResult[1][this.i]).forEach(commCatCountEntry => {
+                      if (['_id', 'c'].includes(commCatCountEntry[0])) {
+                        return;
+                      }
+                      this.commCatCounter[commCatCountEntry[0]] = this.commCatCounter[commCatCountEntry[0]] || 0;
+                      this.commCatCounter[commCatCountEntry[0]] += commCatCountEntry[1];
+                      this.expectedCommCat.add(commCatCountEntry[0])
+                    });
+                  }
+                  if (promiseAllResult[1].length === this.i + 1) {
+                    this.lastItem = true;
+                    return false;
+                  }
+                  this.i++;
+                  return true;
+                }
+              };
+              if (isAggregatedByCategories) {
+                totalConnectedStatus.commCatCounter = {};
+                totalConnectedStatus.expectedCommCat = new Set();
+                totalConnectedStatus.sampledCommCat = {};
+              }
+              if (promiseAllResult[1].length) {
+                totalConnectedStatus.d = promiseAllResult[1][0]._id;
+                totalConnectedStatus.i = 0;
+              }
+              promiseAllResult[0].forEach(countSample => {
+                if (totalConnectedStatus.i === null) {
+                  countSample['connected'] = 0;
+                  // avoid huge response with trivial data
+                  // if necessary, remove second term of root boolean expression and uncomment below
+                  // } if (isAggregatedByCustomers) {
+                  //   // countSample['connected'] = countSample['working'] = 1;
+                } else {
+                  const rawSampleDate = isDailyModel
+                    ? disabledAggregator
+                      ? countSample._id
+                      : countSample._id.d
+                    : countSample._id.e;
+                  if (isAggregatedByCategories) {
+                    totalConnectedStatus.sampledCommCat[rawSampleDate] = totalConnectedStatus.sampledCommCat[rawSampleDate] || new Set();
+                    totalConnectedStatus.sampledCommCat[rawSampleDate].add(countSample._id.ct);
+                  }
+                  const sampleDate = new Date(rawSampleDate);
+                  while (sampleDate.getTime() >= totalConnectedStatus.getTime() || rawSampleDate === null) {
+                    if (!totalConnectedStatus.nextStatus()) {
+                      break;
+                    }
+                  }
+                  switch (context.aggregator) {
+                    // avoid huge response with trivial data
+                    // if necessary, remove second term of root boolean expression and uncomment below
+                    // case 'customers':
+                    //   countSample['connected'] = 1;
+                    //   break;
+                    case 'categories':
+                      countSample['connected'] = totalConnectedStatus.commCatCounter[countSample._id.ct];
+                      break;
+                    default:
+                      countSample['connected'] = totalConnectedStatus.c;
+                      break;
                   }
                 }
-                countSample['connected'] = totalConnectedStatus.c;
+              });
+              if (isAggregatedByCategories) {
+                Object.entries(totalConnectedStatus.sampledCommCat).forEach(sampledCommCatEntry => {
+                  const missingCommCat = new Set([...totalConnectedStatus.expectedCommCat].filter(commCat => !sampledCommCatEntry[1].has(commCat)));
+                  if (missingCommCat.size) {
+                    [...missingCommCat].map(commCat => {
+                      const sampleDate = new Date(sampledCommCatEntry[0]);
+                      let connectedCount = 0, counterIndex = 0;
+
+                      while (counterIndex < promiseAllResult[1].length
+                        && sampleDate.getTime() >= promiseAllResult[1][counterIndex]._id.getTime()) {
+                        console.log(`add ${promiseAllResult[1][counterIndex][commCat]}`)
+                        connectedCount += promiseAllResult[1][counterIndex][commCat]
+                        counterIndex++;
+                      }
+
+                      promiseAllResult[0].push({
+                        _id: isDailyModel
+                          ? {
+                            d: sampledCommCatEntry[0],
+                            ct: commCat,
+                          }
+                          : {
+                            b: DateFormatter.formatDateOrDefault(
+                              new Date(new Date(sampledCommCatEntry[0]).setMonth(new Date(sampledCommCatEntry[0]).getMonth() - 1)),
+                              DateFormatter.buildISOZoneDateFormatter(),
+                            ),
+                            e: sampledCommCatEntry[0],
+                            ct: commCat,
+                          },
+                        consumingBySelling: 0,
+                        consumingByService: 0,
+                        working: 0,
+                        connected: connectedCount,
+                      })
+                    });
+                  }
+                });
               }
-            });
-          }
-          WellKnownJsonRes.okMulti(res, promiseAllResult[0].length, promiseAllResult[0]);
-        })
-        .catch(readError => WellKnownJsonRes.errorDebug(res, readError));
-    })
-    .catch(readError => WellKnownJsonRes.errorDebug(res, readError));
+            }
+            resolve(promiseAllResult[0]);
+          })
+          .catch(readError => reject(readError));
+      });
+  });
 };
