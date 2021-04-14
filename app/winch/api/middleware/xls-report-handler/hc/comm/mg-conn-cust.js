@@ -1,5 +1,3 @@
-const { promiseImpl } = require('ejs');
-const { response } = require('express');
 const {
   Handler,
 } = require('../../../../../../../api/lib/util/handler');
@@ -35,19 +33,67 @@ class MgConnCustHandler extends Handler {
         const xlsWbOutputTasks = [];
         const cellMapping = {
           row: {
-            active: 14,
-            notActive: 15,
+            histCust: {
+              active: 14,
+              notActive: 15,
+            },
+            avg: {
+              dailyUsage: 17,
+              subscriptionSalePrice: {
+                lccy: 18,
+                tccy: 19,
+              },
+              consumption: 20,
+              eSalePrice: {
+                lccy: 21,
+                tccy: 22,
+              },
+              perUserRevenue: {
+                lccy: 23,
+                tccy: 24,
+              },
+            },
+            nonPaid: {
+              consRatio: 25,
+              daysOfServiceRatio: 26,
+            },
+            monthlyRevs: {
+              cash: {
+                lccy: 29,
+                tccy: 36,
+              },
+              mobileMoney: {
+                lccy: 30,
+                tccy: 37,
+              },
+              connectionFees: {
+                lccy: 31,
+                tccy: 38,
+              },
+              total: {
+                lccy: 32,
+                tccy: 39,
+              },
+              exchangeRate: 34,
+            },
           },
           col: {
+            dimUnit: 'E',
+            total: 'F',
             chc: 'G',
             commercial: 'H',
             household: 'I',
             public: 'J',
             productive: 'K',
+            notes: 'L',
           },
         };
+        const tariffsCache = {};
 
-        context.data.periods.forEach(period => {
+        Object.entries(context.data.months).forEach(monthEntry => {
+          const period = monthEntry[0];
+          const daysWithinPeriod = monthEntry[1];
+
           Object.entries(context.data.byProject).forEach(plantByProjectEntry => {
             const projectName = plantByProjectEntry[0];
             const plantById = plantByProjectEntry[1];
@@ -85,10 +131,17 @@ class MgConnCustHandler extends Handler {
                 const miniGridCell = sheetRef.summary.getCell('C9');
                 miniGridCell.name = 'miniGrid'
 
+                const localCcyCell = sheetRef.summary.getCell(`${cellMapping.col.dimUnit}${cellMapping.row.monthlyRevs.total.lccy}`);
+                localCcyCell.name = 'localCcy';
+                localCcyCell.value = context.data.tariffsRepo.getLocalCurrency(projectName);
+                const exchageRateCell = sheetRef.summary.getCell(`D${cellMapping.row.monthlyRevs.exchangeRate}`);
+                exchageRateCell.name = 'exchangeRate';
+                exchageRateCell.value = context.data.tariffsRepo.getExchangeRate(projectName);
+
                 Object.entries(plantById).forEach(plantEntry => {
                   countries.add(plantEntry[1].country);
                   sheetRef[plantEntry[0]] = workbook.addWorksheet(plantEntry[1].name);
-                  sheetRef[plantEntry[0]].model = Object.assign(sheetRef.summary.model, {
+                  sheetRef[plantEntry[0]].model = Object.assign(JSON.parse(JSON.stringify(sheetRef.summary.model)), {
                     mergeCells: sheetRef.summary.model.merges
                   });
                   sheetRef[plantEntry[0]].name = plantEntry[1].name;
@@ -99,18 +152,141 @@ class MgConnCustHandler extends Handler {
                   sheetRef[plantEntry[0]].getCell('C8').value = { formula: projectCell.name };
                   sheetRef[plantEntry[0]].getCell('C9').value = plantEntry[1].name;
 
+                  sheetRef[plantEntry[0]].getCell(`${cellMapping.col.dimUnit}${cellMapping.row.monthlyRevs.total.lccy}`).value = {
+                    formula: localCcyCell.name,
+                  };
+                  sheetRef[plantEntry[0]].getCell(`D${cellMapping.row.monthlyRevs.exchangeRate}`).value = {
+                    formula: exchageRateCell.name,
+                  };
+
                   const selectedSamples = plantEntry[1].samples.byPeriod[period];
                   if (selectedSamples) {
+                    const sampledCommCat = new Set();
+                    const avgCalculator = {
+                      all: {
+                        eCons: 0.0,
+                        eSoldLccy: 0.0,
+                        totSubscriptionFeeLccy: 0.0,
+                        samplesCount: 0,
+                      },
+                      addMonthlySample: function (commCat, eCons, eSoldLccy, subscriptionFeeLccy, activeCustomersCount) {
+                        this[commCat] = this[commCat] || {
+                          eCons: 0.0,
+                          eSoldLccy: 0.0,
+                          totSubscriptionFeeLccy: 0.0,
+                          samplesCount: 0,
+                        };
+                        const totSubscriptionFeeLccy = subscriptionFeeLccy * activeCustomersCount;
+                        this[commCat].eCons += eCons;
+                        this[commCat].eSoldLccy += eSoldLccy;
+                        this[commCat].totSubscriptionFeeLccy += totSubscriptionFeeLccy;
+                        this[commCat].samplesCount++;
+                        this.all.eCons += eCons;
+                        this.all.eSoldLccy += eSoldLccy;
+                        this.all.totSubscriptionFeeLccy += totSubscriptionFeeLccy;
+                        this.all.samplesCount++;
+                      },
+                      getAverageTariffFormula: function (commCat = 'all') {
+                        return {
+                          formula: `${this[commCat].eSoldLccy} / ${this[commCat].eCons}`
+                        }
+                      },
+                      getArpuFormula: function (commCat = 'all') {
+                        return {
+                          formula: `(${this[commCat].totSubscriptionFeeLccy} + ${this[commCat].eSoldLccy}) / ${cellMapping.col[commCat === 'all' ? 'total' : commCat]}${cellMapping.row.histCust.active}`
+                        }
+                      },
+                      checkExpectedSamplesCount (expectedSamplesCount, commCat = 'all') {
+                        return this[commCat].samplesCount === expectedSamplesCount;
+                      }
+                    };
+
                     Object.entries(selectedSamples).forEach(sampleEntry => {
-                      const row = cellMapping.col[sampleEntry[0]];
-                      if (!row) {
+                      if (!cellMapping.col[sampleEntry[0]]) {
+                        // excelude don't care categories (e.g. MoPo)
                         return;
                       }
-                      console.log('active :>> ', `${row}${cellMapping.row.active}`);
-                      console.log('notActive :>> ', `${row}${cellMapping.row.notActive}`);
-                      sheetRef[plantEntry[0]].getCell(`${row}${cellMapping.row.active}`).value = sampleEntry[1].eCustCounters.consumingBySelling;
-                      sheetRef[plantEntry[0]].getCell(`${row}${cellMapping.row.notActive}`).value = sampleEntry[1].eCustCounters.connected - sampleEntry[1].eCustCounters.consumingBySelling;
+                      sampledCommCat.add(cellMapping.col[sampleEntry[0]]);
+                      const commCatColRef = cellMapping.col[sampleEntry[0]];
+                      if (commCatColRef) {
+                        const activeCustomersCount = sampleEntry[1].eCustCounters.consumingBySelling;
+                        const monthlySubscrptionFee = context.data.tariffsRepo.getStandingChargeAtYearMonth(tariffsCache, projectName, sampleEntry[0], period);
+
+                        sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.histCust.active}`).value = activeCustomersCount;
+                        sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.histCust.notActive}`).value = sampleEntry[1].eCustCounters.connected - activeCustomersCount;
+
+                        if (sampleEntry[1].eDeliv) {
+                          if (sampleEntry[0] === 'chc') {
+                            // TODO: define right value to write on CHC column
+                            // sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.monthlyRevs.cash.lccy}`).value = sampleEntry[1].eDeliv['r-es-lccy'];
+                          } else {
+                            sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.monthlyRevs.cash.lccy}`).value = sampleEntry[1].eDeliv['tx-es-lccy'];
+                          }
+
+                          avgCalculator.addMonthlySample(sampleEntry[0], sampleEntry[1].eDeliv['es'], sampleEntry[1].eDeliv['r-es-lccy'], monthlySubscrptionFee, activeCustomersCount);
+                          // if required to have tariff for the period: context.data.tariffsRepo.getTariffPerKwhAtYearMonth(tariffsCache, projectName, sampleEntry[0], period);
+                          if (activeCustomersCount) {
+                            sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.avg.eSalePrice.lccy}`).value = avgCalculator.getAverageTariffFormula(sampleEntry[0]);
+                            sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.avg.perUserRevenue.lccy}`).value = avgCalculator.getArpuFormula(sampleEntry[0]);
+                          }
+                        }
+
+                        if (sampleEntry[1].dailyStats) {
+                          const dailyUsage = Object.values(sampleEntry[1].dailyStats.pod).filter(days => days > 0);
+                          if (dailyUsage.length) {
+                            sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.avg.dailyUsage}`).value = dailyUsage.reduce((acc, current) => (acc + current)) / dailyUsage.length;
+                          }
+
+                          if (activeCustomersCount) {
+                            sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.avg.subscriptionSalePrice.lccy}`).value = {
+                              formula: `${monthlySubscrptionFee}/${commCatColRef}${cellMapping.row.avg.dailyUsage}`
+                            };
+
+                            if (sampleEntry[1].pods) {
+                              let commCatAvgDailyConsumption = 0.0, podSamplesCount = 0;
+                              sampleEntry[1].pods.forEach(pod => {
+                                if (sampleEntry[1].dailyStats.pod[pod._id.pod] > 0) {
+                                  commCatAvgDailyConsumption += (pod['es'] + pod['ep']) / sampleEntry[1].dailyStats.pod[pod._id.pod];
+                                  podSamplesCount++;
+                                }
+                              });
+                              if (activeCustomersCount !== podSamplesCount) {
+                                console.warn(`no match between active customers (${activeCustomersCount}) and pod-related samples (${podSamplesCount}) in ${sampleEntry[0]} cat. of ${plantEntry[1].name}/${period}, fix it!`);
+                              }
+                              sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.avg.consumption}`).value = {
+                                formula: `${commCatAvgDailyConsumption}/${commCatColRef}${cellMapping.row.histCust.active}`
+                              };
+
+                              sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.nonPaid.consRatio}`).value = 0;
+                              sheetRef[plantEntry[0]].getCell(`${commCatColRef}${cellMapping.row.nonPaid.daysOfServiceRatio}`).value = 0;
+                            }
+                          }
+                        }
+                      }
                     });
+                    if (sampledCommCat.size) {
+                      let dailyUsageSumProd = '';
+                      let subscriptionSalePriceSumProd = '';
+                      let consumptionSumProd = '';
+                      [...sampledCommCat].forEach(colWithValues => {
+                        dailyUsageSumProd += `+${colWithValues}${cellMapping.row.avg.dailyUsage}*${colWithValues}${cellMapping.row.histCust.active}`;
+                        subscriptionSalePriceSumProd += `+${colWithValues}${cellMapping.row.avg.subscriptionSalePrice.lccy}*${colWithValues}${cellMapping.row.histCust.active}`;
+                        consumptionSumProd += `+${colWithValues}${cellMapping.row.avg.consumption}*${colWithValues}${cellMapping.row.histCust.active}`;
+                      });
+                      sheetRef[plantEntry[0]].getCell(`${cellMapping.col.total}${cellMapping.row.avg.dailyUsage}`).value = {
+                        formula: `(${dailyUsageSumProd})/${cellMapping.col.total}${cellMapping.row.histCust.active}`,
+                      };
+                      sheetRef[plantEntry[0]].getCell(`${cellMapping.col.total}${cellMapping.row.avg.subscriptionSalePrice.lccy}`).value = {
+                        formula: `(${subscriptionSalePriceSumProd})/${cellMapping.col.total}${cellMapping.row.histCust.active}`,
+                      };
+                      sheetRef[plantEntry[0]].getCell(`${cellMapping.col.total}${cellMapping.row.avg.consumption}`).value = {
+                        formula: `(${consumptionSumProd})/${cellMapping.col.total}${cellMapping.row.histCust.active}`,
+                      };
+                      sheetRef[plantEntry[0]].getCell(`${cellMapping.col.total}${cellMapping.row.avg.eSalePrice.lccy}`).value = avgCalculator.getAverageTariffFormula();
+                      sheetRef[plantEntry[0]].getCell(`${cellMapping.col.total}${cellMapping.row.avg.perUserRevenue.lccy}`).value = avgCalculator.getArpuFormula();
+                      sheetRef[plantEntry[0]].getCell(`${cellMapping.col.total}${cellMapping.row.nonPaid.consRatio}`).value = 0;
+                      sheetRef[plantEntry[0]].getCell(`${cellMapping.col.total}${cellMapping.row.nonPaid.daysOfServiceRatio}`).value = 0;
+                    }
                   } else {
                     // TODO: add note on missing data for current plant on summary ws
                   }
@@ -126,7 +302,6 @@ class MgConnCustHandler extends Handler {
               }));
 
             xlsOutputTask = xlsOutputTask
-              // .then(wbRepo => Promise.all(xlsWsPlantPeriodOutputSubTasks.map(task => task(wbRepo))))
               .then((/*promiseAllResult*/) => {
                 //
                 // 3. return report resource (single project)
@@ -144,7 +319,6 @@ class MgConnCustHandler extends Handler {
 
         // 
         // 2. fill in report resource (all)
-        // FIXME: Promise.all(Object.values(context.out.xls).map(xlsLocalContext => xlsLocalContext.redactXlsTask))
         Promise.all(xlsWbOutputTasks)
           .then(promiseAllResult =>
             //

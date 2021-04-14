@@ -165,6 +165,9 @@ exports.aggregateECustomersByPeriod = (
         if (isAllPeriod || context.aggregator !== 'customers') {
           operationalsGroupStatement.working = { $sum: 1 };
         }
+        if (context.aggregator === 'customers') {
+          operationalsGroupStatement.ctList = { $addToSet: '$ct' };
+        }
 
         let operationalsAggregation = CustomerPeriodModel.aggregate()
           .match(plantFiltersRepo.targetFilter)
@@ -318,7 +321,6 @@ exports.aggregateECustomersByPeriod = (
 
                       while (counterIndex < promiseAllResult[1].length
                         && sampleDate.getTime() >= promiseAllResult[1][counterIndex]._id.getTime()) {
-                        console.log(`add ${promiseAllResult[1][counterIndex][commCat]}`)
                         connectedCount += promiseAllResult[1][counterIndex][commCat]
                         counterIndex++;
                       }

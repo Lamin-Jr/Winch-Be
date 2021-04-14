@@ -19,7 +19,7 @@ class MgConnCustHandler extends Handler {
   handle (context) {
     return new Promise((resolve, reject) => {
       try {
-        // TODO:
+        //
         // 1. prepare data for relevant report resource handler
         localUtil.applyConventionOverConfiguration(context);
 
@@ -66,8 +66,14 @@ class MgConnCustHandler extends Handler {
                   genset: plantItem.setup.genset.cpty,
                   samples: {
                     queryFilter: {
-                      ...localUtil.buildPeriodFilter(context, plantItem.dates.business),
-                      plants: [plantItem._id],
+                      eCustCount: {
+                        ...localUtil.buildECustCountPeriodFilter(context, plantItem.dates.business),
+                        plants: [plantItem._id],
+                      },
+                      eDeliv: {
+                        ...localUtil.buildEDelivPeriodFilter(context, plantItem.dates.business),
+                        plants: [plantItem._id],
+                      }
                     },
                     byPeriod: {},
                   }
@@ -77,25 +83,29 @@ class MgConnCustHandler extends Handler {
               resolve({ // plantsMgConnRepo
                 list: plantList,
                 byProject: plantsByProject,
-                periods: new Set(),
+                months: {},
+                tariffsRepo,
               });
             }))
             .then(plantsMgConnRepo => new Promise(resolve => {
-              const eCustCountsQueryTasks = [];
-              const eDelivQueryTasks = [];
+              const eCustCountsMonthlyQueryTasks = [];
+              const eDelivMonthlyByCommCatQueryTasks = [];
+              const eDelivMonthlyByCustQueryTasks = [];
+              const eCustCountsDailyQueryTasks = [];
               Object.values(plantsMgConnRepo.byProject).forEach(plantsById => {
                 Object.entries(plantsById).forEach(plantEntry => {
-                  eCustCountsQueryTasks.push(
+                  eCustCountsMonthlyQueryTasks.push(
                     PlantCounterCtrl.aggregateECustomersByPeriod(
                       'monthly',
-                      plantEntry[1].samples.queryFilter,
+                      plantEntry[1].samples.queryFilter.eCustCount,
                       {
                         aggregator: 'categories',
                       }
                     )
-                      .then(eCustomersByPeriod => new Promise(resolve => {
-                        eCustomersByPeriod.forEach(sample => {
-                          plantsMgConnRepo.periods.add(sample._id.b);
+                      .then(eCustCountsByPeriod => new Promise(resolve => {
+                        eCustCountsByPeriod.forEach(sample => {
+                          plantsMgConnRepo.months[sample._id.b] = plantsMgConnRepo.months[sample._id.b]
+                            || (new Date(new Date(sample._id.b).setMonth(new Date(sample._id.b).getMonth() + 1)).getTime() - new Date(sample._id.b).getTime()) / (1000 * 60 * 60 * 24);
                           plantEntry[1].samples.byPeriod[sample._id.b] = plantEntry[1].samples.byPeriod[sample._id.b] || {};
                           plantEntry[1].samples.byPeriod[sample._id.b][sample._id.ct] = plantEntry[1].samples.byPeriod[sample._id.b][sample._id.ct] || {}
                           plantEntry[1].samples.byPeriod[sample._id.b][sample._id.ct].eCustCounters = sample;
@@ -103,10 +113,10 @@ class MgConnCustHandler extends Handler {
                         resolve();
                       }))
                   );
-                  eDelivQueryTasks.push(
+                  eDelivMonthlyByCommCatQueryTasks.push(
                     PlantLogCtrl.aggregateDeliveryByCustomerCategory(
                       'monthly',
-                      plantEntry[1].samples.queryFilter,
+                      plantEntry[1].samples.queryFilter.eDeliv,
                       {
                         aggregator: 'categories',
                       }
@@ -114,7 +124,8 @@ class MgConnCustHandler extends Handler {
                       .then(aggregationMeta => aggregationMeta.model.aggregate(aggregationMeta.aggregation.pipeline()).exec())
                       .then(eDeliveryByCustomerCategory => new Promise(resolve => {
                         eDeliveryByCustomerCategory.forEach(sample => {
-                          plantsMgConnRepo.periods.add(sample._id.b);
+                          plantsMgConnRepo.months[sample._id.b] = plantsMgConnRepo.months[sample._id.b]
+                            || (new Date(new Date(sample._id.b).setMonth(new Date(sample._id.b).getMonth() + 1)).getTime() - new Date(sample._id.b).getTime()) / (1000 * 60 * 60 * 24);
                           plantEntry[1].samples.byPeriod[sample._id.b] = plantEntry[1].samples.byPeriod[sample._id.b] || {};
                           plantEntry[1].samples.byPeriod[sample._id.b][sample._id.ct] = plantEntry[1].samples.byPeriod[sample._id.b][sample._id.ct] || {}
                           plantEntry[1].samples.byPeriod[sample._id.b][sample._id.ct].eDeliv = sample;
@@ -122,12 +133,68 @@ class MgConnCustHandler extends Handler {
                         resolve();
                       }))
                   );
+                  eDelivMonthlyByCustQueryTasks.push(
+                    PlantLogCtrl.aggregateDeliveryByCustomerCategory(
+                      'monthly',
+                      plantEntry[1].samples.queryFilter.eDeliv,
+                      {
+                        aggregator: 'customers',
+                      }
+                    )
+                      .then(aggregationMeta => aggregationMeta.model.aggregate(aggregationMeta.aggregation.pipeline()).exec())
+                      .then(eDeliveryByCustomerCategory => new Promise(resolve => {
+                        eDeliveryByCustomerCategory.forEach(sample => {
+                          plantsMgConnRepo.months[sample._id.b] = plantsMgConnRepo.months[sample._id.b]
+                            || (new Date(new Date(sample._id.b).setMonth(new Date(sample._id.b).getMonth() + 1)).getTime() - new Date(sample._id.b).getTime()) / (1000 * 60 * 60 * 24);
+                          plantEntry[1].samples.byPeriod[sample._id.b] = plantEntry[1].samples.byPeriod[sample._id.b] || {};
+                          if (sample.ct.length > 1) {
+                            console.warn(`periodic e-deliv sample ${JSON.stringify(sample._id)} with multiple categories [${sample.ct.join(', ')}], fix it!`);
+                          }
+                          const selectedCommCat = sample.ct[0];
+                          plantEntry[1].samples.byPeriod[sample._id.b] = plantEntry[1].samples.byPeriod[sample._id.b] || {};
+                          plantEntry[1].samples.byPeriod[sample._id.b][selectedCommCat] = plantEntry[1].samples.byPeriod[sample._id.b][selectedCommCat] || {};
+                          plantEntry[1].samples.byPeriod[sample._id.b][selectedCommCat].pods = plantEntry[1].samples.byPeriod[sample._id.b][selectedCommCat].pods || [];
+                          plantEntry[1].samples.byPeriod[sample._id.b][selectedCommCat].pods.push(sample);
+                        })
+                        resolve();
+                      }))
+                  );
+                  eCustCountsDailyQueryTasks.push(
+                    PlantCounterCtrl.aggregateECustomersByPeriod(
+                      'daily',
+                      plantEntry[1].samples.queryFilter.eCustCount,
+                      {
+                        aggregator: 'customers',
+                      }
+                    )
+                      .then(eCustCountsByPeriod => new Promise(resolve => {
+                        eCustCountsByPeriod.forEach(sample => {
+                          let dateKey = sample._id.d;
+                          const sampleDate = new Date(sample._id.d);
+                          if (sampleDate.getDate() !== 1) {
+                            dateKey = DateFormatter.formatDateOrDefault(new Date(sampleDate.setDate(1)), dateFormatter);
+                          }
+                          plantsMgConnRepo.months[dateKey] = plantsMgConnRepo.months[dateKey]
+                            || (new Date(new Date(dateKey).setMonth(new Date(dateKey).getMonth() + 1)).getTime() - new Date(dateKey).getTime()) / (1000 * 60 * 60 * 24);
+                          plantEntry[1].samples.byPeriod[dateKey] = plantEntry[1].samples.byPeriod[dateKey] || {};
+                          plantEntry[1].samples.byPeriod[dateKey][sample.ctList[0]] = plantEntry[1].samples.byPeriod[dateKey][sample.ctList[0]] || {}
+                          plantEntry[1].samples.byPeriod[dateKey][sample.ctList[0]].dailyStats = plantEntry[1].samples.byPeriod[dateKey][sample.ctList[0]].dailyStats || {
+                            pod: {},
+                          };
+                          plantEntry[1].samples.byPeriod[dateKey][sample.ctList[0]].dailyStats.pod[sample._id.pod] = plantEntry[1].samples.byPeriod[dateKey][sample.ctList[0]].dailyStats.pod[sample._id.pod] || 0;
+                          plantEntry[1].samples.byPeriod[dateKey][sample.ctList[0]].dailyStats.pod[sample._id.pod] += (sample.consumingBySelling + sample.consumingByService);
+                        });
+                        resolve();
+                      }))
+                  );
                 });
               });
 
               Promise.all([
-                ...eCustCountsQueryTasks,
-                ...eDelivQueryTasks,
+                ...eCustCountsMonthlyQueryTasks,
+                ...eDelivMonthlyByCommCatQueryTasks,
+                ...eDelivMonthlyByCustQueryTasks,
+                ...eCustCountsDailyQueryTasks,
               ])
                 .then((/* promiseAllResult */) => resolve(plantsMgConnRepo));
             })),
@@ -170,3 +237,137 @@ class MgConnCustHandler extends Handler {
 
 
 module.exports = MgConnCustHandler;
+
+
+//
+// private part
+
+const tariffsRepo = {
+  byProject: {
+    'WP1': {
+      lccy: 'SLL',
+      exchangeRate: 9400.0,
+      element: {
+        scLccy: {
+          chc: {
+            start: 0,
+          },
+          commercial: {
+            start: 23000,
+            '2020-11-01': 12923.7,
+          },
+          household: {
+            start: 23000,
+            '2020-11-01': 12923.7,
+          },
+          public: {
+            start: 23000,
+            '2020-11-01': 12923.7,
+          },
+          productive: {
+            start: 23000,
+            '2020-11-01': 12923.7,
+          },
+        },
+        kcLccy: {
+          chc: {
+            start: 7596,
+            '2020-11-01': 8428.35,
+          },
+          commercial: {
+            start: 7596,
+            '2020-11-01': 8428.35,
+          },
+          household: {
+            start: 7596,
+            '2020-11-01': 8428.35,
+          },
+          public: {
+            start: 7596,
+            '2020-11-01': 8428.35,
+          },
+          productive: {
+            start: 7596,
+            '2020-11-01': 8428.35,
+          },
+        },
+      },
+    },
+  },
+  getLocalCurrency: function (project) {
+    return this.byProject[project].lccy;
+  },
+  getExchangeRate: function (project) {
+    return this.byProject[project].exchangeRate;
+  },
+  getStandingChargeAtYearMonth: function (
+    cache,
+    project,
+    commCat,
+    rawTargetDate,
+
+  ) {
+    return this.getTariffElementAtYearMonth(
+      cache,
+      project,
+      commCat,
+      'scLccy',
+      rawTargetDate,
+    );
+  },
+  getTariffPerKwhAtYearMonth: function (
+    cache,
+    project,
+    commCat,
+    rawTargetDate,
+  ) {
+    return this.getTariffElementAtYearMonth(
+      cache,
+      project,
+      commCat,
+      'kcLccy',
+      rawTargetDate,
+    );
+  },
+  getTariffElementAtYearMonth: function (
+    cache,
+    project,
+    commCat,
+    element,
+    rawTargetDate,
+  ) {
+    if (!cache[project]) { cache[project] = {}; }
+    if (!cache[project][commCat]) { cache[project][commCat] = {}; }
+    if (!cache[project][commCat][rawTargetDate]) { cache[project][commCat][rawTargetDate] = {} }
+    let result = cache[project][commCat][rawTargetDate][element];
+
+    if (!result) {
+      result = this.byProject[project].element[element][commCat].start;
+
+      const tariffChangeRawDates = Object.keys(this.byProject[project].element[element][commCat]);
+      let index = 1;
+      while (index < tariffChangeRawDates.length && (new Date(rawTargetDate).getTime() > new Date(tariffChangeRawDates[index]).getTime())) {
+        result = this.byProject[project].element[element][commCat][tariffChangeRawDates[index]];
+        index++;
+      }
+
+      cache[project][commCat][rawTargetDate][element] = result;
+    }
+
+    return result;
+  }
+};
+
+// TODO: to add custom notes
+const notesRepo = {
+  cell: {
+    row: {
+      start: 45,
+      offset: 11,
+    },
+    col: {
+      start: 2,
+      span: 11,
+    },
+  },
+};

@@ -82,31 +82,34 @@ exports.buildNotifyError = (notifyResult) => {
   return error
 }
 
-exports.buildPeriodFilter = (context, businessStartDate, now = new Date()) => {
-  const actualPeriodFrom = getActualPeriodFrom(
-    context.selection.period.from
-      ? new Date(context.selection.period.from)
-      : now,
-    businessStartDate,
-    now
-  );
-  const actualPeriodTo = getActualPeriodTo(
-    context.selection.period.to
-      ? new Date(context.selection.period.to)
-      : now,
-    businessStartDate,
-    now
-  );
+exports.buildECustCountPeriodFilter = (context, businessStartDate, now = new Date()) => {
+  const result = buildPeriodFilter(context, businessStartDate, now);
+  let adjustedToDate = new Date(result.tsTo);
+  // bring to next month
+  adjustedToDate = new Date(new Date(adjustedToDate).setMonth(adjustedToDate.getMonth() + 1))
+  // set date to 1
+  adjustedToDate = new Date(new Date(adjustedToDate).setDate(1))
+  // bring to one day before (actual end of month)
+  adjustedToDate = new Date(new Date(adjustedToDate).setDate(adjustedToDate.getDate() - 1))
+  // format results
+  const dateFormatter = DateFormatter.buildISOZoneDateFormatter();
+  result.tsFrom = DateFormatter.formatDateOrDefault(result.tsFrom, dateFormatter);
+  result.tsTo = DateFormatter.formatDateOrDefault(adjustedToDate, dateFormatter);
+  return result;
+}
 
-  if (actualPeriodFrom === null || actualPeriodTo === null
-    || actualPeriodFrom.getTime() > actualPeriodTo.getTime()) {
-    return queryPeriods;
-  }
-
-  return {
-    tsFrom: new Date(new Date(actualPeriodFrom).setDate(1)),
-    tsTo: actualPeriodTo,
-  }
+exports.buildEDelivPeriodFilter = (context, businessStartDate, now = new Date()) => {
+  const result = buildPeriodFilter(context, businessStartDate, now);
+  let adjustedToDate = new Date(result.tsTo);
+  // bring to next month
+  adjustedToDate = new Date(new Date(adjustedToDate).setMonth(adjustedToDate.getMonth() + 1))
+  // set date to 1
+  adjustedToDate = new Date(new Date(adjustedToDate).setDate(1))
+  // format results
+  const dateFormatter = DateFormatter.buildISOZoneDateFormatter();
+  result.tsFrom = DateFormatter.formatDateOrDefault(result.tsFrom, dateFormatter);
+  result.tsTo = DateFormatter.formatDateOrDefault(adjustedToDate, dateFormatter);
+  return result;
 }
 
 
@@ -154,7 +157,7 @@ const getActualPeriodFrom = (inputDate, businessStartDate, now = new Date()) => 
     ? businessStartDate
     : now.getTime() > inputDate.getTime()
       ? inputDate
-      : null;
+      : now;
 }
 
 const getActualPeriodTo = (inputDate, businessStartDate, now = new Date()) => {
@@ -162,5 +165,31 @@ const getActualPeriodTo = (inputDate, businessStartDate, now = new Date()) => {
     ? now
     : inputDate.getTime() >= businessStartDate.getTime()
       ? inputDate
-      : null;
+      : businessStartDate;
+}
+
+const buildPeriodFilter = (context, businessStartDate, now = new Date()) => {
+  const actualPeriodFrom = getActualPeriodFrom(
+    context.selection.period.from
+      ? new Date(context.selection.period.from)
+      : now,
+    businessStartDate,
+    now
+  );
+  const actualPeriodTo = getActualPeriodTo(
+    context.selection.period.to
+      ? new Date(context.selection.period.to)
+      : now,
+    businessStartDate,
+    now
+  );
+
+  if (actualPeriodFrom.getTime() > actualPeriodTo.getTime()) {
+    throw new Error('invalid period filter')
+  }
+
+  return {
+    tsFrom: new Date(new Date(actualPeriodFrom).setDate(1)),
+    tsTo: actualPeriodTo,
+  };
 }
