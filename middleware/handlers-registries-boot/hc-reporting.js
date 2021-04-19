@@ -9,6 +9,10 @@ exports.bootReportRecipes = (slug, registry) => {
   HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
   registry.boot(registryRef, new HandlerClass());
 
+  registryRef = 'mg-onbrd-cust'
+  HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
+  registry.boot(registryRef, new HandlerClass());
+
   handlerType = 'om'
 
   registryRef = 'om-genfac-op'
@@ -24,6 +28,10 @@ exports.bootXlsRecipes = (slug, registry) => {
   handlerType = 'comm'
 
   registryRef = 'mg-conn-cust'
+  HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
+  registry.boot(registryRef, new HandlerClass());
+
+  registryRef = 'mg-onbrd-cust'
   HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
   registry.boot(registryRef, new HandlerClass());
 

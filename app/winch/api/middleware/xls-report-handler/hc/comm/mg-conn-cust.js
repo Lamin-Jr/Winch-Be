@@ -92,7 +92,7 @@ class MgConnCustHandler extends Handler {
 
         Object.entries(context.data.months).forEach(monthEntry => {
           const period = monthEntry[0];
-          const daysWithinPeriod = monthEntry[1];
+          // const daysWithinPeriod = monthEntry[1];
 
           Object.entries(context.data.byProject).forEach(plantByProjectEntry => {
             const projectName = plantByProjectEntry[0];
@@ -140,6 +140,7 @@ class MgConnCustHandler extends Handler {
 
                 Object.entries(plantById).forEach(plantEntry => {
                   countries.add(plantEntry[1].country);
+
                   sheetRef[plantEntry[0]] = workbook.addWorksheet(plantEntry[1].name);
                   sheetRef[plantEntry[0]].model = Object.assign(JSON.parse(JSON.stringify(sheetRef.summary.model)), {
                     mergeCells: sheetRef.summary.model.merges
@@ -203,7 +204,7 @@ class MgConnCustHandler extends Handler {
 
                     Object.entries(selectedSamples).forEach(sampleEntry => {
                       if (!cellMapping.col[sampleEntry[0]]) {
-                        // excelude don't care categories (e.g. MoPo)
+                        // exclude don't care categories (e.g. MoPo)
                         return;
                       }
                       sampledCommCat.add(cellMapping.col[sampleEntry[0]]);

@@ -105,7 +105,7 @@ class MgConnCustHandler extends Handler {
                       .then(eCustCountsByPeriod => new Promise(resolve => {
                         eCustCountsByPeriod.forEach(sample => {
                           plantsMgConnRepo.months[sample._id.b] = plantsMgConnRepo.months[sample._id.b]
-                            || (new Date(new Date(sample._id.b).setMonth(new Date(sample._id.b).getMonth() + 1)).getTime() - new Date(sample._id.b).getTime()) / (1000 * 60 * 60 * 24);
+                            || localUtil.getTotalDaysOfMonth(sample._id.b);
                           plantEntry[1].samples.byPeriod[sample._id.b] = plantEntry[1].samples.byPeriod[sample._id.b] || {};
                           plantEntry[1].samples.byPeriod[sample._id.b][sample._id.ct] = plantEntry[1].samples.byPeriod[sample._id.b][sample._id.ct] || {}
                           plantEntry[1].samples.byPeriod[sample._id.b][sample._id.ct].eCustCounters = sample;

@@ -22,10 +22,10 @@ const {
 
 // cRud/list
 exports.list = (req, res, next) => {
-  WellKnownJsonRes.error(res, 501)
+  WellKnownJsonRes.error(res, 501);
 };
 
 // cRud/detailed
 exports.detailed = (req, res, next) => {
-  WellKnownJsonRes.error(res, 501)
+  WellKnownJsonRes.error(res, 501);
 };

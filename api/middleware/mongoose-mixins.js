@@ -197,15 +197,15 @@ module.exports.makeContactModel = (conf = { type: {}, icon: {}, address: {} }) =
     return {
         'type': {
             type: String,
-            ...conf.type
+            ...conf.type,
         },
         icon: {
             type: String,
-            ...conf.icon
+            ...conf.icon,
         },
         address: {
             type: String,
-            ...conf.address
+            ...conf.address,
         }
     }
 }

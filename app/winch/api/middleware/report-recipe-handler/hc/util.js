@@ -112,6 +112,11 @@ exports.buildEDelivPeriodFilter = (context, businessStartDate, now = new Date())
   return result;
 }
 
+exports.getTotalDaysOfMonth = (targetDate) => {
+  return (new Date(new Date(targetDate).setMonth(new Date(targetDate).getMonth() + 1)).getTime() - new Date(targetDate).getTime()) / (1000 * 60 * 60 * 24)
+}
+
+
 
 //
 // private part
