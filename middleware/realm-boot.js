@@ -56,6 +56,21 @@ exports.boot = () => {
   let s2sSetupPromises = [];
 
   //
+  // winchenergy.com
+  {
+    const target = 'winchenrgy.com';
+    if (process.env.S2S_WINCHENERGY_COM_API_KEY) {
+      s2sSetupPromises.push({
+        target,
+        promise: S2SCtrl.activateApiToken(process.env.S2S_WINCHENERGY_COM_API_KEY)
+      });
+    }
+    else {
+      console.error(`wrong S2S credentials setup for ${target}, fix it!`);
+    }
+  }
+
+  //
   // OrangeSL
   {
     const target = 'OrangeSL';

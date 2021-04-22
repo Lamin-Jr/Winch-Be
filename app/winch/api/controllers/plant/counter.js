@@ -92,6 +92,46 @@ exports.eCustomersByPeriod = (req, res, next) => {
     });
 };
 
+// cRud/co2Avoidance
+exports.eCo2Avoidance = (req, res, next) => {
+  let monthReference = new Date();
+  monthReference = new Date(new Date(monthReference).setDate(monthReference.getDate() - 3));
+  monthReference = new Date(monthReference.setDate(1));
+  const filter = {
+    tsFrom: DateFormatter.formatDateOrDefault(new Date(new Date(monthReference).setDate(monthReference.getDate() - 3)), DateFormatter.buildISODateFormatter()),
+    tsTo: DateFormatter.formatDateOrDefault(monthReference, DateFormatter.buildISODateFormatter()),
+  }
+
+  Promise.all([
+    PlantCtrl.aggregateDeliveryByCustomerCategory('all')
+      .then(aggregationMeta => aggregationMeta.aggregation.exec()),
+    PlantCtrl.aggregateDeliveryByCustomerCategory('daily', filter)
+      .then(aggregationMeta => aggregationMeta.aggregation.exec()),
+  ])
+    .then(promiseAllResult => {
+      let averageProduction = 0.0
+      promiseAllResult[1].forEach(sample => {
+        averageProduction += (sample.ep + sample.es);
+      });
+      averageProduction /= promiseAllResult[1].length;
+
+      WellKnownJsonRes.okSingle(res, {
+        startDate: filter.tsTo,
+        initialProductionkWh: Math.round(promiseAllResult[0][0].ep + promiseAllResult[0][0].es * 100) / 100,
+        installedPowerkWh: 365.46,
+        productionPerMinute: Math.round(averageProduction / 24 / 60 * 100) / 100,
+      });
+      // FIXME: WellKnownJsonRes.notImplemented(res);
+    })
+    .catch(readError => {
+      if (readError.status) {
+        WellKnownJsonRes.error(res, readError.status, [readError.message]);
+      } else {
+        WellKnownJsonRes.errorDebug(res, readError);
+      }
+    });
+};
+
 
 //
 // utils
