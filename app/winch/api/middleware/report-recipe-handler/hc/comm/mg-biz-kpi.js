@@ -26,10 +26,10 @@ class MgConnCustHandler extends Handler {
         const dateFormatter = DateFormatter.buildISOZoneDateFormatter();
 
         // perform required queries
-        const PlantCtrl = require('../../../../../../../app/winch/api/controllers/plant');
+        const PlantCtrl = require('../../../../controllers/plant');
         const plantFilters = buildPlantFilters(context.selection.plant);
-        const PlantLogCtrl = require('../../../../../../../app/winch/api/controllers/plant/log');
-        const PlantCounterCtrl = require('../../../../../../../app/winch/api/controllers/plant/counter');
+        const PlantLogCtrl = require('../../../../controllers/plant/log');
+        const PlantCounterCtrl = require('../../../../controllers/plant/counter');
 
         Promise.all([
           // Promise #0.0) plants by projects
@@ -203,7 +203,7 @@ class MgConnCustHandler extends Handler {
             //
             // 2. call report resource handler
             const xlsReportHandlersRegistry = require('../../../xls-report-handlers-registry');
-            xlsReportHandlersRegistry.handle('mg-conn-cust', {
+            xlsReportHandlersRegistry.handle('mg-biz-kpi', {
               in: context,
               // plantsMgConnRepo
               data: promiseAllResult[0],
@@ -214,7 +214,7 @@ class MgConnCustHandler extends Handler {
                 xlsOutContextList,
                 {
                   notifications: context.notifications,
-                  templateKey: 'mg-conn-cust',
+                  templateKey: 'mg-biz-kpi',
                 }
               ))
               .then(notifyResult => {

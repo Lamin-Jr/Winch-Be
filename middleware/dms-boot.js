@@ -75,7 +75,7 @@ exports.boot = () => new Promise((resolve, reject) => {
       return ({
         'mg-pot-cust': this.basePathKey.HC_COMM,
         'mg-onbrd-cust': this.basePathKey.HC_COMM,
-        'mg-conn-cust': this.basePathKey.HC_COMM,
+        'mg-biz-kpi': this.basePathKey.HC_COMM,
         'mg-day-cons': this.basePathKey.HC_COMM,
         'om-genfac-op': this.basePathKey.HC_OM,
         'om-batt-op': this.basePathKey.HC_OM,
@@ -91,12 +91,15 @@ exports.boot = () => new Promise((resolve, reject) => {
     isSupportedMymeType: function (templateKey, mimeType) {
       const reportTemplatesAllowedMimeTypes = this.getReportTemplatesAllowedMimeTypes();
       const wellKnownMiMeTypes = ({
+        // DEPRECATED
         'mg-pot-cust': reportTemplatesAllowedMimeTypes,
         'mg-onbrd-cust': reportTemplatesAllowedMimeTypes,
         'mg-conn-cust': reportTemplatesAllowedMimeTypes,
         'mg-day-cons': reportTemplatesAllowedMimeTypes,
         'om-genfac-op': reportTemplatesAllowedMimeTypes,
         'om-batt-op': reportTemplatesAllowedMimeTypes,
+        // NEW
+        'mg-biz-kpi': reportTemplatesAllowedMimeTypes,
       })[templateKey] || [
           ...reportTemplatesAllowedMimeTypes
         ];

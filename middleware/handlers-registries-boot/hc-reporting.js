@@ -5,7 +5,7 @@ exports.bootReportRecipes = (slug, registry) => {
 
   handlerType = 'comm'
 
-  registryRef = 'mg-conn-cust'
+  registryRef = 'mg-biz-kpi'
   HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
   registry.boot(registryRef, new HandlerClass());
 
@@ -27,7 +27,7 @@ exports.bootXlsRecipes = (slug, registry) => {
 
   handlerType = 'comm'
 
-  registryRef = 'mg-conn-cust'
+  registryRef = 'mg-biz-kpi'
   HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
   registry.boot(registryRef, new HandlerClass());
 
