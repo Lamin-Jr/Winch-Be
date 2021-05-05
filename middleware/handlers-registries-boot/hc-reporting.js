@@ -30,6 +30,9 @@ exports.bootXlsRecipes = (slug, registry) => {
   registryRef = 'mg-biz-kpi'
   HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
   registry.boot(registryRef, new HandlerClass());
+  registryRef = 'mg-biz-kpi-moma'
+  HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);
+  registry.boot(registryRef, new HandlerClass());
 
   registryRef = 'mg-onbrd-cust'
   HandlerClass = require(`../../app/winch/api/middleware/${slug}-handler/hc/${handlerType}/${registryRef}`);

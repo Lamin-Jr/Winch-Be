@@ -203,7 +203,7 @@ class MgConnCustHandler extends Handler {
             //
             // 2. call report resource handler
             const xlsReportHandlersRegistry = require('../../../xls-report-handlers-registry');
-            xlsReportHandlersRegistry.handle('mg-biz-kpi', {
+            xlsReportHandlersRegistry.handle(`mg-biz-kpi${context.variant && context.variant.length ? `-${context.variant}` : ''}`, {
               in: context,
               // plantsMgConnRepo
               data: promiseAllResult[0],
@@ -248,6 +248,11 @@ const tariffsRepo = {
       lccy: 'SLL',
       exchangeRate: 9400.0,
       element: {
+        vat: {
+          all: {
+            start: 0.15,
+          },
+        },
         scLccy: {
           chc: {
             start: 0,
@@ -299,6 +304,19 @@ const tariffsRepo = {
   },
   getExchangeRate: function (project) {
     return this.byProject[project].exchangeRate;
+  },
+  getVatAtYearMonth: function (
+    cache,
+    project,
+    rawTargetDate,
+  ) {
+    return this.getTariffElementAtYearMonth(
+      cache,
+      project,
+      'all',
+      'vat',
+      rawTargetDate,
+    );
   },
   getStandingChargeAtYearMonth: function (
     cache,
@@ -356,18 +374,4 @@ const tariffsRepo = {
 
     return result;
   }
-};
-
-// TODO: to add custom notes
-const notesRepo = {
-  cell: {
-    row: {
-      start: 45,
-      offset: 11,
-    },
-    col: {
-      start: 2,
-      span: 11,
-    },
-  },
 };

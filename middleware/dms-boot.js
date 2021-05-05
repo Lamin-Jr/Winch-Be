@@ -73,12 +73,15 @@ exports.boot = () => new Promise((resolve, reject) => {
     },
     getBasePathKey: function (templateKey) {
       return ({
+        // DEPRECATED
         'mg-pot-cust': this.basePathKey.HC_COMM,
         'mg-onbrd-cust': this.basePathKey.HC_COMM,
-        'mg-biz-kpi': this.basePathKey.HC_COMM,
         'mg-day-cons': this.basePathKey.HC_COMM,
         'om-genfac-op': this.basePathKey.HC_OM,
         'om-batt-op': this.basePathKey.HC_OM,
+        // NEW
+        'mg-biz-kpi': this.basePathKey.HC_COMM,
+        'mg-biz-kpi-moma': this.basePathKey.HC_COMM,
       })[templateKey];
     },
     buildReportTemplatesBaseDirPath: function (templateKey) {
@@ -100,6 +103,7 @@ exports.boot = () => new Promise((resolve, reject) => {
         'om-batt-op': reportTemplatesAllowedMimeTypes,
         // NEW
         'mg-biz-kpi': reportTemplatesAllowedMimeTypes,
+        'mg-biz-kpi-moma': reportTemplatesAllowedMimeTypes,
       })[templateKey] || [
           ...reportTemplatesAllowedMimeTypes
         ];
