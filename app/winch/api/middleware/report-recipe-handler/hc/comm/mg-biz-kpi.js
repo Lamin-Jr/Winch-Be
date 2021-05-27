@@ -190,11 +190,20 @@ class MgConnCustHandler extends Handler {
                 });
               });
 
+              const connFeeQueryTask = PlantCounterCtrl.eCustomersConnectionFees({
+                plants: plantsMgConnRepo.list.map(plant => plant._id),
+              })
+                .then(eConnFeesHistByPlant => new Promise(resolve => {
+                  tariffsRepo.loadConnFeesHist(eConnFeesHistByPlant);
+                  resolve();
+                }));
+
               Promise.all([
                 ...eCustCountsMonthlyQueryTasks,
                 ...eDelivMonthlyByCommCatQueryTasks,
                 ...eDelivMonthlyByCustQueryTasks,
                 ...eCustCountsDailyQueryTasks,
+                connFeeQueryTask,
               ])
                 .then((/* promiseAllResult */) => resolve(plantsMgConnRepo));
             })),
@@ -214,19 +223,25 @@ class MgConnCustHandler extends Handler {
                 xlsOutContextList,
                 {
                   notifications: context.notifications,
+                  fileNameBuilder: function (fileNameBuilderContext) {
+                    return `Schedule3_PartB_1_a__MG-KPIs__${fileNameBuilderContext.year}-${fileNameBuilderContext.month}`
+                  },
+                  session: context.session,
                   templateKey: 'mg-biz-kpi',
                 }
               ))
               .then(notifyResult => {
                 if (notifyResult.status === 200) {
-                  resolve();
+                  resolve(notifyResult.session
+                    ? { session: notifyResult.session }
+                    : undefined);
                 } else {
                   reject(localUtil.buildNotifyError(notifyResult));
                 }
               })
               .catch(error => reject(error));
           }))
-          .then(() => resolve())
+          .then(handleResult => resolve(handleResult))
           .catch(error => reject(error));
       } catch (error) {
         reject(error);
@@ -253,24 +268,45 @@ const tariffsRepo = {
             start: 0.15,
           },
         },
-        scLccy: {
+        connFee: {
           chc: {
-            start: 0,
+            start: 0.0,
           },
           commercial: {
-            start: 23000,
+            start: 150000.0,
+            '2020-11-01': 193739.0,
+          },
+          household: {
+            start: 150000.0,
+            '2020-11-01': 193739.0,
+          },
+          public: {
+            start: 150000.0,
+            '2020-11-01': 193739.0,
+          },
+          productive: {
+            start: 150000.0,
+            '2020-11-01': 193739.0,
+          },
+        },
+        scLccy: {
+          chc: {
+            start: 0.0,
+          },
+          commercial: {
+            start: 23000.0,
             '2020-11-01': 12923.7,
           },
           household: {
-            start: 23000,
+            start: 23000.0,
             '2020-11-01': 12923.7,
           },
           public: {
-            start: 23000,
+            start: 23000.0,
             '2020-11-01': 12923.7,
           },
           productive: {
-            start: 23000,
+            start: 23000.0,
             '2020-11-01': 12923.7,
           },
         },
@@ -298,6 +334,16 @@ const tariffsRepo = {
         },
       },
     },
+  },
+  byPlant: {
+  },
+  loadConnFeesHist: function (eConnFeesHistByPlant) {
+    eConnFeesHistByPlant.forEach(eConnFeesHistItem => {
+      this.byPlant[eConnFeesHistItem._id.m] = this.byPlant[eConnFeesHistItem._id.m] || {}
+      this.byPlant[eConnFeesHistItem._id.m].connFee = this.byPlant[eConnFeesHistItem._id.m].connFee || {}
+      this.byPlant[eConnFeesHistItem._id.m].connFee[eConnFeesHistItem._id.ct] = this.byPlant[eConnFeesHistItem._id.m].connFee[eConnFeesHistItem._id.ct] || {}
+      this.byPlant[eConnFeesHistItem._id.m].connFee[eConnFeesHistItem._id.ct][eConnFeesHistItem._id.d] = eConnFeesHistItem.cnt
+    });
   },
   getLocalCurrency: function (project) {
     return this.byProject[project].lccy;
@@ -373,5 +419,43 @@ const tariffsRepo = {
     }
 
     return result;
-  }
+  },
+  getTotalConnFeesAtYearMonth: function (
+    cache,
+    project,
+    plant,
+    commCat,
+    rawTargetDate,
+  ) {
+    if (!cache[plant]) { cache[plant] = {}; }
+    if (!cache[plant][commCat]) { cache[plant][commCat] = {}; }
+    let result = cache[plant][commCat][rawTargetDate];
+
+    if (!result) {
+      const totalCustomers = this.byPlant[plant].connFee[commCat][rawTargetDate]
+
+      if (!totalCustomers) {
+        result = {
+          total: 0.0,
+          getCellValue () {
+            return this.total;
+          }
+        };
+      } else {
+        const connFeeAtPeriod = this.getTariffElementAtYearMonth(cache, project, commCat, 'connFee', rawTargetDate);
+        result = {
+          total: connFeeAtPeriod * totalCustomers,
+          getCellValue () {
+            return {
+              formula: `${connFeeAtPeriod} * ${totalCustomers}`,
+            };
+          },
+        };
+      }
+
+      cache[plant][commCat][rawTargetDate] = result;
+    }
+
+    return result;
+  },
 };

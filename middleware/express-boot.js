@@ -9,6 +9,9 @@ exports.boot = (isLocalEnv) => new Promise((resolve, reject) => {
     // create a new express server
     const app = express();
 
+    // add multiple download as a zip support
+    const zip = require('express-zip');
+
     //
     // CUSTOM PART I - begin
     //
@@ -82,6 +85,7 @@ exports.boot = (isLocalEnv) => new Promise((resolve, reject) => {
     app.use('/winch/v1/reports/handlers', require('../app/winch/api/routes/report/handler'));
     app.use('/winch/v1/reports/templates', require('../app/winch/api/routes/report/template'));
     app.use('/winch/v1/reports/notifications', require('../app/winch/api/routes/report/notification'));
+    app.use('/winch/v1/reports/sessions', require('../app/winch/api/routes/report/session'));
     // DEPRECATED
     app.use('/winch/plants/:plantId/parts', propagatePlantId, require('../app/winch/api/routes/plant-part'));
     app.use('/winch/plants/aggregates', require('../app/winch/api/routes/plant-aggregate'));

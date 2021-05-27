@@ -28,7 +28,8 @@ const {
 } = require('./_grouping_e-deliv')
 const {
   buildDeliverySorting
-} = require('./_sorting_e-deliv')
+} = require('./_sorting_e-deliv');
+const { JsonObjectHelper } = require('../../../../../api/lib/util/json-util');
 
 
 //
@@ -121,7 +122,6 @@ exports.eCo2Avoidance = (req, res, next) => {
         installedPowerkWh: 365.46,
         productionPerMinute: Math.round(averageProduction / 24 / 60 * 100) / 100,
       });
-      // FIXME: WellKnownJsonRes.notImplemented(res);
     })
     .catch(readError => {
       if (readError.status) {
@@ -393,5 +393,88 @@ exports.aggregateECustomersByPeriod = (
           })
           .catch(readError => reject(readError));
       });
+  });
+};
+
+exports.eCustomersConnectionFees = (
+  filter = {},
+) => {
+  return new Promise((resolve, reject) => {
+    const plantFiltersRepo = buildPlantFiltersRepo(filter, true);
+    const customerPlantsFilter = {};
+
+    PlantCtrl.filteredEDelivDriverPlants(plantFiltersRepo.plantsFilter, plantFiltersRepo.plantsStatusFilter, plantFiltersRepo.plantsLocationsFilter)
+      .then(readResult => {
+        if (!readResult.length) {
+          const error = new Error('selection did not result in any plant');
+          error.status = 404;
+          reject(error);
+          return;
+        } else if (readResult.length !== 1) {
+          const error = new Error('unable to query more than one driver at once');
+          error.status = 501;
+          reject(error);
+          return;
+        }
+
+        Object.assign(customerPlantsFilter, {
+          'plant': readResult[0].plants.length == 1
+            ? readResult[0].plants[0]
+            : { $in: readResult[0].plants },
+        });
+
+        // perform actual aggregations
+        //
+        const Customer = require('../../models/customer2');
+
+        let aggregation = Customer.aggregate();
+
+        if (JsonObjectHelper.isNotEmpty(customerPlantsFilter)) {
+          aggregation = aggregation.match(customerPlantsFilter);
+        }
+
+        aggregation = aggregation
+          .group({
+            _id: {
+              m: '$plant',
+              pod: '$pod',
+            },
+            commCat: { $first: '$commCat' },
+            start: { $min: '$tsFrom' },
+          })
+          .project({
+            commCat: 1,
+            start: {
+              $dateToString: {
+                date: '$start',
+                format: '%Y-%m-01',
+              }
+            },
+            startTs: '$start',
+          })
+          .group({
+            _id: {
+              m: '$_id.m',
+              d: '$start',
+              ct: '$commCat'
+            },
+            startTs: { $min: '$startTs' },
+            cnt: { $sum: 1 },
+            // pods: { $push: '$_id.pod' },
+          })
+          .sort({
+            '_id.m': 1,
+            'startTs': 1,
+            '_id.ct': 1,
+          })
+          //
+          ;
+
+        aggregation = aggregation.allowDiskUse(true);
+
+        return aggregation.exec()
+      })
+      .then(readResult => resolve(readResult))
+      .catch(readError => reject(readError));
   });
 };

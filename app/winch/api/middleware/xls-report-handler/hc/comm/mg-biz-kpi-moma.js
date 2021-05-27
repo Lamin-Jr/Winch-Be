@@ -25,6 +25,7 @@ class MgConnCustHandler extends Handler {
         // 1a. perform preliminary operations upon context
         const dmsInstance = loadDmsInstance(context);
         const dmsEngineContext = dmsInstance.context;
+        const projects = new Set();
 
         //
         // 1b. init processing resources
@@ -90,8 +91,8 @@ class MgConnCustHandler extends Handler {
                 tccy: 41,
               },
               connectionFees: {
-                lccy: 43,
-                tccy: 43,
+                lccy: 42,
+                tccy: 42,
               },
               total: {
                 lccy: 45,
@@ -118,7 +119,56 @@ class MgConnCustHandler extends Handler {
           const period = monthEntry[0];
           const daysWithinPeriod = monthEntry[1];
           const projectSampledCommCatOverMonth = new Set();
-          const summaryWsReferences = {
+          const summaryWsCalculator = {
+            summaryWsReferences: {},
+            addPlantWorksheet: function (ws, plant) {
+              this.buildColArray(this.letterToColumn(cellMapping.col.chc), this.letterToColumn(cellMapping.col.productive)).forEach(col => {
+                this.buildRowArray(17, 21).forEach(row => this.applyToSummaryWsCell(ws, plant, col, row));
+                this.buildRowArray(24, 24).forEach(row => this.applyToSummaryWsCell(ws, plant, col, row));
+                this.buildRowArray(26, 26).forEach(row => this.applyToSummaryWsCell(ws, plant, col, row));
+                this.buildRowArray(35, 36).forEach(row => this.applyToSummaryWsCell(ws, plant, col, row));
+                this.buildRowArray(40, 42).forEach(row => this.applyToSummaryWsCell(ws, plant, col, row));
+              });
+            },
+            applyToSummaryWsCell: function (ws, plant, col, row) {
+              const cellRef = `${col}${row}`;
+              const cellName = `${plant}${cellRef}`;
+              ws.getCell(cellRef).name = cellName;
+              this.summaryWsReferences[cellRef] = this.summaryWsReferences[cellRef] || {
+                func: 'SUM',
+                samples: [],
+              };
+              this.summaryWsReferences[cellRef].samples.push(cellName);
+            },
+            applyToSummaryWs: function (summaryWs) {
+              Object.entries(this.summaryWsReferences).forEach(summaryWsReferenceEntry => {
+                summaryWs.getCell(summaryWsReferenceEntry[0]).value = {
+                  formula: `${summaryWsReferenceEntry[1].func}(${summaryWsReferenceEntry[1].samples.join(', ')})`
+                };
+              });
+            },
+            buildRowArray: function (start, end) {
+              return Array.from([...Array(end - start + 1).keys()].map(key => key + start));
+            },
+            buildColArray: function (start, end) {
+              return Array.from([...Array(end - start + 1).keys()].map(key => this.columnToLetter(key + start)));
+            },
+            columnToLetter: function (column) {
+              var temp, letter = '';
+              while (column > 0) {
+                temp = (column - 1) % 26;
+                letter = String.fromCharCode(temp + 65) + letter;
+                column = (column - temp - 1) / 26;
+              }
+              return letter;
+            },
+            letterToColumn: function (letter) {
+              var column = 0, length = letter.length;
+              for (var i = 0; i < length; i++) {
+                column += (letter.charCodeAt(i) - 64) * Math.pow(26, length - i - 1);
+              }
+              return column;
+            }
           };
 
           // Single project workbook loop
@@ -126,6 +176,8 @@ class MgConnCustHandler extends Handler {
             const projectName = plantByProjectEntry[0];
             const plantById = plantByProjectEntry[1];
             const projectWithinPeriodWorkbook = new ExcelJS.Workbook();
+
+            projects.add(projectName);
 
             let xlsOutputTask = projectWithinPeriodWorkbook.xlsx.readFile(
               dmsEngineContext.buildPathFromWorkDir(
@@ -234,7 +286,6 @@ class MgConnCustHandler extends Handler {
 
                 // Single plant worksheet loop
                 Object.entries(plantById).forEach(plantEntry => {
-                  const plantCellNameRef = plantEntry[1].name.replace(/\s/g, '').toLowerCase();
                   countries.add(plantEntry[1].country);
 
                   // duplicate worksheet for current plant
@@ -243,6 +294,12 @@ class MgConnCustHandler extends Handler {
                     mergeCells: sheetRef.summary.model.merges
                   });
                   sheetRef[plantEntry[0]].name = plantEntry[1].name;
+
+                  // update references to summary worksheet calculations
+                  {
+                    const plantCellNameRef = plantEntry[1].name.replace(/\s/g, '').toLowerCase();
+                    summaryWsCalculator.addPlantWorksheet(sheetRef[plantEntry[0]], plantCellNameRef);
+                  }
 
                   // fix references to constant values
                   sheetRef[plantEntry[0]].getCell(`${cellMapping.col.header}${cellMapping.row.header.issueDate}`).value = { formula: issueDateCell.name };
@@ -321,7 +378,17 @@ class MgConnCustHandler extends Handler {
                       sampledCommCat.add(cellMapping.col[sampleEntry[0]]);
                       const commCatColRef = cellMapping.col[sampleEntry[0]];
                       if (commCatColRef) {
-                        const activeCustomersCount = sampleEntry[1].eCustCounters.consumingBySelling;
+                        // avoid the following as it counts meters rather than pods
+                        // const oldActiveCustomersCount = sampleEntry[1].eCustCounters.consumingBySelling;
+                        const activeCustomersCount = sampleEntry[1].pods && sampleEntry[1].pods.length
+                          ? sampleEntry[1].pods.filter(pod => pod.ep + pod.es > 0).length
+                          : 0;
+                        // if (oldActiveCustomersCount !== activeCustomersCount) {
+                        //   // here a note could indicate when meter replacement occurs
+                        // }
+                        const notActiveCustomersCount = (sampleEntry[1].pods
+                          ? sampleEntry[1].pods.length
+                          : 0) - activeCustomersCount;
                         const monthlySubscrptionFee = context.data.tariffsRepo.getStandingChargeAtYearMonth(tariffsCache, projectName, sampleEntry[0], period);
 
                         if (activeCustomersCount) {
@@ -333,52 +400,28 @@ class MgConnCustHandler extends Handler {
                           // Connected Customers
                           cellRef = `${commCatColRef}${cellMapping.row.connCust}`;
                           const connCustCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                          connCustCell.name = `${plantCellNameRef}${cellRef}`;
                           connCustCell.value = sampleEntry[1].eCustCounters.connected;
-                          summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                            func: 'SUM',
-                            samples: [],
-                          };
-                          summaryWsReferences[cellRef].samples.push(connCustCell.name);
                         }
                         {
                           // Historically Active Customers / Active Users
                           cellRef = `${commCatColRef}${cellMapping.row.histCust.active}`;
                           const activeCustCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                          activeCustCell.name = `${plantCellNameRef}${cellRef}`;
                           activeCustCell.value = activeCustomersCount;
-                          summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                            func: 'SUM',
-                            samples: [],
-                          };
-                          summaryWsReferences[cellRef].samples.push(activeCustCell.name);
                         }
                         {
                           // Historically Active Customers / Zero Users
                           cellRef = `${commCatColRef}${cellMapping.row.histCust.notActive}`;
                           const notActiveCustCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                          notActiveCustCell.name = `${plantCellNameRef}${cellRef}`;
-                          notActiveCustCell.value = sampleEntry[1].eCustCounters.connected - activeCustomersCount;
-                          summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                            func: 'SUM',
-                            samples: [],
-                          };
-                          summaryWsReferences[cellRef].samples.push(notActiveCustCell.name);
+                          notActiveCustCell.value = notActiveCustomersCount;
                         }
 
                         if (activeCustomersCount) {
                           // Total days of subscription 
                           cellRef = `${commCatColRef}${cellMapping.row.subscriptionDays.tot}`;
                           const totSubscriptionDaysCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                          totSubscriptionDaysCell.name = `${plantCellNameRef}${cellRef}`;
                           totSubscriptionDaysCell.value = {
                             formula: `${daysWithinPeriod}*${commCatColRef}${cellMapping.row.histCust.active}`
                           };
-                          summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                            func: 'SUM',
-                            samples: [],
-                          };
-                          summaryWsReferences[cellRef].samples.push(totSubscriptionDaysCell.name);
                         }
 
                         if (sampleEntry[1].dailyStats) {
@@ -387,13 +430,7 @@ class MgConnCustHandler extends Handler {
                             // Total days of use
                             cellRef = `${commCatColRef}${cellMapping.row.usageDays.tot}`;
                             const totUsageDaysCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                            totUsageDaysCell.name = `${plantCellNameRef}${cellRef}`;
                             totUsageDaysCell.value = dailyUsage.reduce((acc, current) => (acc + current));
-                            summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                              func: 'SUM',
-                              samples: [],
-                            };
-                            summaryWsReferences[cellRef].samples.push(totUsageDaysCell.name);
                           }
 
                           {
@@ -416,65 +453,42 @@ class MgConnCustHandler extends Handler {
                               // Total consumed energy
                               cellRef = `${commCatColRef}${cellMapping.row.consumption.tot}`;
                               const monthlyRevsESoldCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                              monthlyRevsESoldCell.name = `${plantCellNameRef}${cellRef}`;
                               monthlyRevsESoldCell.value = perPlantAvgCalculator.getTotalConsumption(sampleEntry[0]);
-                              summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                                func: 'SUM',
-                                samples: [],
-                              };
-                              summaryWsReferences[cellRef].samples.push(monthlyRevsESoldCell.name);
                             }
                             {
                               // Monthly Customer Credit Expenses / Subscription fees
                               cellRef = `${commCatColRef}${cellMapping.row.monthlyRevs.fees.lccy}`;
                               const monthlyRevsSubscriptionFeesCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                              monthlyRevsSubscriptionFeesCell.name = `${plantCellNameRef}${cellRef}`;
                               monthlyRevsSubscriptionFeesCell.value = perPlantAvgCalculator.getTotalSubcriptionFees(sampleEntry[0]);
-                              summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                                func: 'SUM',
-                                samples: [],
-                              };
-                              summaryWsReferences[cellRef].samples.push(monthlyRevsSubscriptionFeesCell.name);
                             }
                             {
                               // Monthly Customer Credit Expenses / Energy sold
                               cellRef = `${commCatColRef}${cellMapping.row.monthlyRevs.eSold.lccy}`;
                               const monthlyRevsESoldCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                              monthlyRevsESoldCell.name = `${plantCellNameRef}${cellRef}`;
                               monthlyRevsESoldCell.value = perPlantAvgCalculator.getTotalEnergySold(sampleEntry[0]);
-                              summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                                func: 'SUM',
-                                samples: [],
-                              };
-                              summaryWsReferences[cellRef].samples.push(monthlyRevsESoldCell.name);
                             }
                             {
                               // Customer Credit Incomes / Cash collections
                               cellRef = `${commCatColRef}${cellMapping.row.monthlyRevs.cash.lccy}`;
                               const monthlyRevsCashCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                              monthlyRevsCashCell.name = `${plantCellNameRef}${cellRef}`;
                               monthlyRevsCashCell.value = sampleEntry[0] === 'chc'
                                 ? 0
                                 : sampleEntry[1].eDeliv['tx-es-lccy'];
-                              summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                                func: 'SUM',
-                                samples: [],
-                              };
-                              summaryWsReferences[cellRef].samples.push(monthlyRevsCashCell.name);
                             }
                             {
                               // Customer Credit Incomes / Mobile Money collections
                               cellRef = `${commCatColRef}${cellMapping.row.monthlyRevs.mobileMoney.lccy}`;
                               const monthlyRevsMoMoCell = sheetRef[plantEntry[0]].getCell(cellRef);
-                              monthlyRevsMoMoCell.name = `${plantCellNameRef}${cellRef}`;
                               monthlyRevsMoMoCell.value = 0;
-                              summaryWsReferences[cellRef] = summaryWsReferences[cellRef] || {
-                                func: 'SUM',
-                                samples: [],
-                              };
-                              summaryWsReferences[cellRef].samples.push(monthlyRevsMoMoCell.name);
                             }
                           }
+                        }
+
+                        {
+                          // Grid connection/upfront initial service revenues
+                          cellRef = `${commCatColRef}${cellMapping.row.monthlyRevs.connectionFees.lccy}`;
+                          const upfrontRevsMoMoCell = sheetRef[plantEntry[0]].getCell(cellRef);
+                          upfrontRevsMoMoCell.value = context.data.tariffsRepo.getTotalConnFeesAtYearMonth(tariffsCache, projectName, plantEntry[0], sampleEntry[0], period).getCellValue();
                         }
                       }
                     });
@@ -493,11 +507,8 @@ class MgConnCustHandler extends Handler {
                 countryCell.value = [...countries].join(', ');
                 miniGridCell.value = `${Object.keys(plantById).length} site${Object.keys(plantById).length ? 's' : ''}`;
 
-                Object.entries(summaryWsReferences).forEach(summaryWsReferenceEntry => {
-                  sheetRef.summary.getCell(summaryWsReferenceEntry[0]).value = {
-                    formula: `${summaryWsReferenceEntry[1].func}(${summaryWsReferenceEntry[1].samples.join(', ')})`
-                  };
-                });
+                // update formulas to summary worksheet calculations
+                summaryWsCalculator.applyToSummaryWs(sheetRef.summary)
 
                 resolve({
                   workbook,
@@ -511,6 +522,7 @@ class MgConnCustHandler extends Handler {
                 // 3. return report resource (single project)
                 return {
                   xlsMaker: projectWithinPeriodWorkbook.xlsx,
+                  project: [...projects].join('_'),
                   period,
                 };
               }

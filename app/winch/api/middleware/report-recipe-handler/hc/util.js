@@ -1,7 +1,17 @@
 const {
+  v4: uuidv4,
+  version: uuidVersion,
+  validate: uuidValidate,
+} = require('uuid');
+
+const {
   // NumberFormatter,
   DateFormatter,
 } = require('../../../../../../api/lib/util/formatter');
+
+const {
+  legacy: fsLegacy
+} = require('../../../../../../api/lib/util/fs');
 
 exports.applyConventionOverConfiguration = (context) => {
   context.i18n = {
@@ -23,9 +33,17 @@ exports.applyConventionOverConfiguration = (context) => {
 }
 
 exports.notifyAll = (xlsOutContextList, localContext) => new Promise((resolve, reject) => {
+  localContext.session.id = localContext.session.open === true || localContext.session.id
+    ? uuidValidate(localContext.session.id) && uuidVersion(localContext.session.id) === 4
+      ? localContext.session.id
+      : uuidv4()
+    : undefined
   Promise.all(xlsOutContextList.map(xlsOutContext => Promise.all(localContext.notifications.map(notification => notify(xlsOutContext.xlsMaker, {
     notification,
+    fileNameBuilder: localContext.fileNameBuilder,
     period: xlsOutContext.period,
+    project: xlsOutContext.project,
+    session: localContext.session,
     templateKey: localContext.templateKey,
   })))
     .then(promiseAllResult => new Promise(resolve => {
@@ -52,11 +70,15 @@ exports.notifyAll = (xlsOutContextList, localContext) => new Promise((resolve, r
   ))
     .then(promiseAllResult => {
       if (promiseAllResult.length === 1) {
-        resolve(promiseAllResult[0]);
+        resolve({
+          ...promiseAllResult[0],
+          session: localContext.session.id,
+        });
         return;
       }
       const notifyResult = {
         status: 200,
+        session: localContext.session.id,
         errors: [],
       }
       let errorCounter = 0;
@@ -135,11 +157,26 @@ const notify = (xlsMaker, localContext) => new Promise((resolve, reject) => {
     }
     const basePathKey = dmsInstance.context.getBasePathKey(localContext.templateKey);
     const periodAsDate = new Date(localContext.period);
-    const subPathSegments = dmsInstance.context.pathSegment.oReport.oHc.fGenerated(periodAsDate.getFullYear(), periodAsDate.getMonth() + 1);
-    dmsInstance.context.createWorkDirSubPath(basePathKey, false, ...subPathSegments)
+    const year = periodAsDate.getFullYear().toString();
+    const month = (periodAsDate.getMonth() + 1).toString().padStart(2, '0');
+    const fileName = `${localContext.fileNameBuilder({ year, month })}.xlsx`;
+    let subPathSegments;
+    let creteDirPromise;
+    if (localContext.session.id) {
+      subPathSegments = [...dmsInstance.context.pathSegment.oReport.vSession];
+      subPathSegments.push(localContext.session.owner);
+      subPathSegments.push(localContext.session.id);
+      creteDirPromise = dmsInstance.context.createRootDirSubPath(false, ...subPathSegments);
+    } else {
+      subPathSegments = dmsInstance.context.pathSegment.oReport.oHc.fGeneratedByProject(localContext.project);
+      creteDirPromise = dmsInstance.context.createWorkDirSubPath(basePathKey, false, ...subPathSegments);
+    }
+    creteDirPromise
       .then(dirPath => {
         setTimeout(() => {
-          return xlsMaker.writeFile(dmsInstance.context.buildPathFromWorkDir(basePathKey, ...subPathSegments, `${localContext.templateKey}.xlsx`));
+          // FIXME:
+          console.log('writing...', fsLegacy.path.join(dirPath, fileName));
+          return xlsMaker.writeFile(fsLegacy.path.join(dirPath, fileName));
         }, 100 * subPathSegments.length);
       })
       .then(() => resolve({

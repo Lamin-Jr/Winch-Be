@@ -53,6 +53,10 @@ class DateFormatter extends BaseFormatter {
     return v => `${v.getFullYear()}-${new String(v.getMonth() + 1).padStart(2, '0')}-${new String(v.getDate()).padStart(2, '0')}${onlyDate ? '' : `T${new String(v.getHours()).padStart(2, '0')}:${new String(v.getMinutes()).padStart(2, '0')}:${new String(v.getSeconds()).padStart(2, '0')}.${(v.getMilliseconds() / 1000).toFixed(3).slice(2, 5)}Z`}`;
   }
 
+  static buildFileNameDateFormatter (onlyDate = true) {
+    return v => `${v.getFullYear()}-${new String(v.getMonth() + 1).padStart(2, '0')}-${new String(v.getDate()).padStart(2, '0')}${onlyDate ? '' : `_${new String(v.getHours()).padStart(2, '0')}-${new String(v.getMinutes()).padStart(2, '0')}-${new String(v.getSeconds()).padStart(2, '0')}`}`;
+  }
+
   static formatDateOrDefault (value = new Date(), formatter, defaultIfInvalid = '', invalidChecker = dateChecker) {
     return BaseFormatter.formatValueOrDefault(value, formatter, defaultIfInvalid, invalidChecker)
   }

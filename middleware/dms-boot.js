@@ -16,12 +16,14 @@ exports.boot = () => new Promise((resolve, reject) => {
     basePathKey: {
       'HC_COMM': 'HC_COMM',
       'HC_OM': 'HC_OM',
+      'SESSIONS': 'SESSIONS',
       'TMP_UPLOADS': 'TMP_UPLOADS',
     },
     rootBasePath: '', // boot will assign a concrete value
     pathSegment: {
       oReport: {
         vTemplate: ['reporting', 'templates'],
+        vSession: ['reporting', 'sessions'],
         oOwn: {
           fGenerated: function (project, ...subPathSegments) {
             return ['projects', project, ...subPathSegments];
@@ -29,8 +31,8 @@ exports.boot = () => new Promise((resolve, reject) => {
         },
         oHc: {
           vTemplate: ['templates'],
-          fGenerated: function (year, month, ...subPathSegments) {
-            return ['repo', year.toString(), month.toString().padStart(2, '0'), ...subPathSegments];
+          fGeneratedByProject: function (project, ...subPathSegments) {
+            return ['repo', 'projects', project, ...subPathSegments];
           }
         }
       }
@@ -64,12 +66,51 @@ exports.boot = () => new Promise((resolve, reject) => {
     listWorkDirFiles: function (basePathKey, ...subPathSegments) {
       return fsUtil.listDirFiles(this.buildPathFromWorkDir(basePathKey, ...subPathSegments));
     },
-    buildReportTemplatesListAsyncTasks () {
+    buildReportTemplatesListAsyncTasks: function () {
       return [
         this.listWorkDirFiles(this.basePathKey.HC_COMM, ...this.pathSegment.oReport.oHc.vTemplate),
         this.listWorkDirFiles(this.basePathKey.HC_OM, ...this.pathSegment.oReport.oHc.vTemplate),
         this.listRootDirFiles(...this.pathSegment.oReport.vTemplate),
       ]
+    },
+    buildReportSessionsListAsyncTasks: function (userId) {
+      return [
+        this.listRootDirFiles(...this.pathSegment.oReport.vSession, userId),
+      ]
+    },
+    buildReportSessionContentAsyncTask: function (userId, sessionId) {
+      return Promise.all(this.buildReportSessionsListAsyncTasks(userId))
+        .then(promiseAllResult => new Promise(resolve => {
+          const sessionFileListTasks = []
+          const sessionFileListTasksBySessionId = promiseAllResult
+            // flatten source array
+            .reduce((acc, current) => acc.concat(current), [])
+            // map directory list task with matching sessionId
+            .reduce((acc, current) => {
+              if (sessionId && current !== sessionId) {
+                return acc;
+              }
+              const task = this.listRootDirFiles(...this.pathSegment.oReport.vSession, userId, current);
+              sessionFileListTasks.push(task);
+              return {
+                ...acc,
+                [current]: task,
+              };
+            }, {
+            })
+            //
+            ;
+
+          Promise.all(sessionFileListTasks)
+            .then(promiseAllResult => {
+              const sessionIds = Object.keys(sessionFileListTasksBySessionId);
+              promiseAllResult.forEach((sessionFileListTaskResult, index) => {
+                sessionFileListTasksBySessionId[sessionIds[index]] = sessionFileListTaskResult;
+              });
+              resolve(sessionFileListTasksBySessionId);
+            });
+        }))
+        .catch(error => reject(error));
     },
     getBasePathKey: function (templateKey) {
       return ({
@@ -87,6 +128,9 @@ exports.boot = () => new Promise((resolve, reject) => {
     buildReportTemplatesBaseDirPath: function (templateKey) {
       return this.buildPathFromWorkDir(this.getBasePathKey(templateKey), ...this.pathSegment.oReport.oHc.vTemplate)
         || this.buildPathFromRootDir(...this.pathSegment.oReport.vTemplate)
+    },
+    buildReportSessionsBaseDirPath: function (userId, sessionId) {
+      return this.buildPathFromRootDir(...this.pathSegment.oReport.vSession, userId, sessionId)
     },
     getReportTemplatesAllowedMimeTypes: function () {
       return (process.env.WCH_STO_RPT_TMPL_ALLOW_MIMETYPES || '').split(/\s*,\s*/);

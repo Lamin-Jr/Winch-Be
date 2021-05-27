@@ -38,13 +38,24 @@ exports.notify_by_handler_id = (req, res, next) => {
         ...(req.body || {}),
         // override request body with value from db
         ...(readResult.handler.params || {}),
+        // override context/session with value from token
+        ...{
+          session: {
+            ...req.body.session,
+            owner: req.userData._id
+          }
+        },
         notifications: [...(readResult['notifications'] || [])],
       }
       const reportRecipeHandlersRegistry = require('../../middleware/report-recipe-handlers-registry');
       reportRecipeHandlersRegistry
         .handle(readResult.handler.name, readResult.handler.params)
-        .then(() => {
-          WellKnownJsonRes.created(res);
+        .then((handleResponse) => {
+          if (handleResponse) {
+            WellKnownJsonRes.okSingle(res, handleResponse);
+          } else {
+            WellKnownJsonRes.created(res);
+          }
         })
         .catch(handleError => {
           WellKnownJsonRes.error(res, handleError.status || 500, [handleError.message]);
