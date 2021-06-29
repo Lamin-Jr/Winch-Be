@@ -53,6 +53,11 @@ driverDBConnRegistry.add('spm', {
   'connected': handleConnectionUp,
   'disconnected': handleConnectionDown
 });
+driverDBConnRegistry.add('sma', {
+  'error': handleAfterConnectionError,
+  'connected': handleConnectionUp,
+  'disconnected': handleConnectionDown
+});
 driverDBConnRegistry.add('mcl', {
   'error': handleAfterConnectionError,
   'connected': handleConnectionUp,
