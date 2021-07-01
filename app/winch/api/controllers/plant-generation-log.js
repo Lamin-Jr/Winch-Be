@@ -52,15 +52,33 @@ exports.aggregate = (req, res, next) => {
 
   const readingsFilter = {
   };
+  let isSupportedDriver = false;
+  let tsFieldPath;
 
-  readingsFilter.ts = readingsFilter.ts || {};
-  readingsFilter.ts['$gt'] = new Date(req.body.filter['ts-from']);
-  readingsFilter.ts = readingsFilter.ts || {};
-  readingsFilter.ts['$lte'] = new Date(req.body.filter['ts-to']);
+  if (req.body.filter['driver'] === 'mcl') {
+    isSupportedDriver = true;
+    tsFieldPath = 'ts';
+    readingsFilter[tsFieldPath] = readingsFilter[tsFieldPath] || {};
+    readingsFilter[tsFieldPath]['$gt'] = new Date(req.body.filter['ts-from']);
+    readingsFilter[tsFieldPath] = readingsFilter[tsFieldPath] || {};
+    readingsFilter[tsFieldPath]['$lte'] = new Date(req.body.filter['ts-to']);
 
-  readingsFilter.m = req.body.filter['plant']
+    readingsFilter.m = req.body.filter['plant']
 
-  readingsFilter._id = new RegExp(`^.*\\|v${req.body.filter['driver'].toUpperCase()}\\|s${req.body.filter['device']}\\|`)
+    readingsFilter._id = new RegExp(`^.*\\|v${req.body.filter['driver'].toUpperCase()}\\|s${req.body.filter['device']}\\|`)
+  }
+  if (req.body.filter['driver'] === 'sma') {
+    isSupportedDriver = true;
+    tsFieldPath = '_id';
+    readingsFilter[tsFieldPath] = readingsFilter[tsFieldPath] || {};
+    readingsFilter[tsFieldPath]['$gt'] = new Date(req.body.filter['ts-from']);
+    readingsFilter[tsFieldPath]['$lte'] = new Date(req.body.filter['ts-to']);
+  }
+
+  if (!isSupportedDriver) {
+    WellKnownJsonRes.error(res, 400, [`missing required params: \'${[...missingParams].join('\', \'')}\'`]);
+    return;
+  }
 
   // select driver db key and site
   //
@@ -105,12 +123,12 @@ exports.aggregate = (req, res, next) => {
       let aggregation = GenReadingOnPeriod.aggregate()
         .match(readingsFilter)
         .addFields({
-          tsg: { '$add': ['$ts', -1000] }
+          tsg: { '$add': [`$${tsFieldPath}`, -1000] }
         })
         ;
 
       {
-        const groupByPeriod = buildReadingsGrouping(req.params.period, req._q.proj)
+        const groupByPeriod = buildReadingsGrouping(req.params.period, req._q.proj, tsFieldPath)
         if (groupByPeriod) {
           aggregation = aggregation.group(groupByPeriod)
 
@@ -147,9 +165,9 @@ exports.aggregate = (req, res, next) => {
 //
 // private part
 
-const buildReadingsAggregation = () => {
+const buildReadingsAggregation = (tsFieldPath) => {
   return {
-    'ts': { '$max': '$ts' },
+    'ts': { '$max': `$${tsFieldPath}` },
     'batt-t-in': { '$avg': '$b.t.in' },
     'e-theoretical': { '$sum': '$e.t' },
     'e-delivered': { '$sum': '$e.d' },
@@ -331,13 +349,13 @@ const groupingByPeriod = {
   },
 };
 
-const buildReadingsGrouping = (period, projection) => {
+const buildReadingsGrouping = (period, projection, tsFieldPath = 'ts') => {
   const result = {
     ...groupingByPeriod[period]
   };
 
   const fieldsNamesToAggregate = Object.keys(projection);
-  const aggregations = buildReadingsAggregation();
+  const aggregations = buildReadingsAggregation(tsFieldPath);
   const fieldsToAggregate = {};
   if (fieldsNamesToAggregate.length) {
     const negativeProjection = Object.values(projection)[0] === 0;
